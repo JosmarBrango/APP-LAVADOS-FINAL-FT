@@ -16,6 +16,10 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 LATEST_DATA_KEY = 'latest_upload'
 
+# Inicializar carpetas y DB (para que funcione con Gunicorn en Render)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+database.init_db()
+
 # ─── Helpers internos ─────────────────────────────────────────────────────────
 def _recalcular_stats(db_data: dict) -> dict:
     """
@@ -482,8 +486,6 @@ def registro_qr(placa):
 
 # ─── Arranque ─────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    os.makedirs('uploads', exist_ok=True)
-    database.init_db()
     threading.Timer(1.0, lambda: webbrowser.open('http://127.0.0.1:5001')).start()
     print('\n  * Dashboard corriendo en: http://127.0.0.1:5001\n')
     app.run(port=5001)
