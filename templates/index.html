@@ -12,6 +12,8 @@
 <body>
 
 <div class="app">
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sb-brand">
@@ -66,9 +68,12 @@
   <!-- MAIN -->
   <main class="main">
     <div class="topbar">
-      <div>
-        <div class="tb-title" id="tbTitle">Diagnóstico general</div>
-        <div class="tb-sub" id="tbSub">Zona Urabá · 0 vehículos</div>
+      <div style="display: flex; align-items: center;">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <div>
+          <div class="tb-title" id="tbTitle">Diagnóstico general</div>
+          <div class="tb-sub" id="tbSub">Zona Urabá · 0 vehículos</div>
+        </div>
       </div>
       <div class="tb-badge" id="tbBadge" style="display:none"><div class="pulse"></div><span id="tbBadgeText">0 lavados generales pendientes</span></div>
     </div>
@@ -432,5 +437,20 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelector('.sidebar-overlay').classList.toggle('open');
+  }
+  // Cerrar sidebar al seleccionar un item en la vista móvil
+  document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if(window.innerWidth <= 860) {
+        document.querySelector('.sidebar').classList.remove('open');
+        document.querySelector('.sidebar-overlay').classList.remove('open');
+      }
+    });
+  });
+</script>
 </body>
 </html>
