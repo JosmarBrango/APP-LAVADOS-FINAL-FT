@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>¡Lavado Registrado! — {{ placa }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #F8FAFC;
+      --card:  #FFFFFF;
+      --border:#E2E8F0;
+      --text:  #0F172A;
+      --muted: #64748B;
+      --green: #10B981;
+      --blue:  #0EA5E9;
+      --sans: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    /* ── Checkmark animation ── */
+    .check-wrap {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(63,185,80,.12);
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 24px;
+      animation: popIn .5s cubic-bezier(.175,.885,.32,1.275) both;
+    }
+    @keyframes popIn {
+      0%   { transform: scale(.4); opacity: 0; }
+      100% { transform: scale(1);  opacity: 1; }
+    }
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+      animation: slideUp .4s ease both;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .ok-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 6px;
+    }
+    .ok-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    /* ── Details grid ── */
+    .details {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .det-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+    }
+    .det-row + .det-row { border-top: 1px solid var(--border); }
+    .det-lbl { font-size: 12px; color: var(--muted); }
+    .det-val { font-size: 13px; font-weight: 600; color: var(--text); }
+    /* ── Plate ── */
+    .placa-badge {
+      display: inline-block;
+      font-family: 'Courier New', monospace;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: .1em;
+      margin-bottom: 6px;
+    }
+    /* ── Buttons ── */
+    .btn-back {
+      display: block;
+      width: 100%;
+      background: rgba(88,166,255,.1);
+      border: 1px solid rgba(88,166,255,.3);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--blue);
+      cursor: pointer;
+      text-decoration: none;
+      font-family: var(--sans);
+      transition: background .2s;
+    }
+    .btn-back:hover { background: rgba(88,166,255,.18); }
+    .logo-bar {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--muted); margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo-bar">
+    <span style="font-size:18px">🚛</span>
+    <span>Flota Urabá · Sistema de Lavados</span>
+  </div>
+
+  <div class="card">
+    <div class="check-wrap">✓</div>
+    <div class="placa-badge">{{ placa }}</div>
+    <div class="ok-title">¡Lavado registrado!</div>
+    <div class="ok-sub">
+      El lavado general ha sido confirmado exitosamente en el sistema.
+    </div>
+
+    <div class="details">
+      <div class="det-row">
+        <span class="det-lbl">Placa</span>
+        <span class="det-val" style="font-family:monospace;letter-spacing:.08em;color:var(--blue)">{{ placa }}</span>
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">Fecha</span>
+        <span class="det-val">{{ fecha_fmt }}</span>
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">Hora de llegada</span>
+        <span class="det-val">{{ hora }}</span>
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">Fin estimado (3h)</span>
+        <span class="det-val" style="color:var(--muted)">{{ fin_est }}</span>
+      </div>
+    </div>
+
+    <a href="/registro/{{ placa }}" class="btn-back">
+      ↩ Registrar otro lavado para esta placa
+    </a>
+  </div>
+
+</body>
+</html>

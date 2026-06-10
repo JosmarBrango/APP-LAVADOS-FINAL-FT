@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Registrar Lavado{% if vehiculo %} — {{ vehiculo.placa }}{% endif %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #F8FAFC;
+      --card:    #FFFFFF;
+      --card2:   #F1F5F9;
+      --border:  #E2E8F0;
+      --text:    #0F172A;
+      --muted:   #64748B;
+      --green:   #10B981;
+      --gold:    #F59E0B;
+      --blue:    #0EA5E9;
+      --red:     #EF4444;
+      --sans: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+    }
+    /* ── Logo bar ── */
+    .logo-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .03em;
+    }
+    .logo-bar .emoji { font-size: 18px; }
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+    }
+    /* ── Plate badge ── */
+    .badge-placa {
+      display: inline-flex;
+      align-items: center;
+      background: #F0F9FF;
+      border: 2px solid var(--blue);
+      border-radius: 14px;
+      padding: 12px 22px;
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      color: var(--blue);
+      font-family: 'Courier New', monospace;
+      margin-bottom: 10px;
+    }
+    .tipo-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--card2);
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 22px;
+      border: 1px solid var(--border);
+    }
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .info-cell {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .info-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 3px;
+    }
+    .info-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 0 0 22px;
+    }
+    /* ── Form section ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 14px;
+    }
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 16px; /* 16px prevents iOS auto-zoom */
+      color: var(--text);
+      font-family: var(--sans);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color .2s;
+    }
+    .field input:focus { border-color: var(--blue); }
+    /* ── Confirm button ── */
+    .btn-confirm {
+      width: 100%;
+      background: var(--green);
+      border: none;
+      border-radius: 14px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-family: var(--sans);
+      transition: all .2s;
+      letter-spacing: .01em;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    .btn-confirm:active { opacity: .85; transform: scale(.98); }
+    .btn-confirm:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    /* ── Alert ── */
+    .alert {
+      padding: 14px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .alert.err { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25); color: #f85149; }
+    /* ── Lavados counter ── */
+    .lav-counter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .lav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .lav-dot.empty { background: var(--border); }
+    /* ── Footer ── */
+    .footer-note {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 20px;
+      opacity: .7;
+    }
+    .text-red { color: var(--red) !important; }
+    .text-green { color: var(--green) !important; }
+  </style>
+</head>
+<body>
+
+  <div class="logo-bar">
+    <span class="emoji">🚛</span>
+    <span>Flota Urabá · Sistema de Lavados</span>
+  </div>
+
+  {% if not vehiculo %}
+  <div class="card">
+    <div class="alert err">{{ error or 'Vehículo no encontrado o sistema sin inicializar.' }}</div>
+    <p style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px">Comunícate con el administrador del sistema.</p>
+  </div>
+
+  {% else %}
+  <div class="card">
+    {% if error %}
+    <div class="alert err" style="margin-bottom: 20px;">{{ error }}</div>
+    {% endif %}
+    <!-- Plate & Vehicle Info -->
+    <div>
+      <div class="badge-placa">{{ vehiculo.placa }}</div>
+    </div>
+    <div class="tipo-tag">{{ vehiculo.tipo or 'N/D' }} · {{ vehiculo.ruta or 'N/D' }}</div>
+
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-lbl">Municipio</div>
+        <div class="info-val">{{ vehiculo.mun or 'N/D' }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-lbl">Supervisor</div>
+        <div class="info-val">{{ vehiculo.sup or 'N/D' }}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-lbl">Lavados generales</div>
+        <div class="info-val">
+          <div class="lav-counter">
+            <div class="lav-dot {% if vehiculo.lavGen < 1 %}empty{% endif %}"></div>
+            <div class="lav-dot {% if vehiculo.lavGen < 2 %}empty{% endif %}"></div>
+            <div class="lav-dot {% if vehiculo.lavGen < 3 %}empty{% endif %}"></div>
+            <span style="font-size:12px;color:var(--muted);margin-left:4px">{{ vehiculo.lavGen }}/3</span>
+          </div>
+        </div>
+      </div>
+      <div class="info-cell">
+        <div class="info-lbl">Último lavado</div>
+        <div class="info-val {% if vehiculo.ultimo == 'NUNCA' %}text-red{% else %}text-green{% endif %}" style="font-size:12px;">
+          {{ vehiculo.ultimo }}
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">📋 Registrar lavado general</div>
+
+    <form method="POST" id="formReg" autocomplete="off">
+      <div class="field">
+        <label>Fecha del lavado</label>
+        <input type="date" name="fecha" id="inFecha" required>
+      </div>
+      <div class="field">
+        <label>Hora de llegada al lavadero</label>
+        <input type="time" name="hora" id="inHora" required>
+      </div>
+      <button type="submit" class="btn-confirm" id="btnConfirm">
+        <span style="font-size:20px">✓</span>
+        Confirmar Lavado General
+      </button>
+    </form>
+  </div>
+
+  <p class="footer-note">Zona Urabá · Panel de Gestión de Lavados</p>
+  {% endif %}
+
+  <script>
+    // Pre-fill date and time with current local values
+    (function() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+      const time  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      const fechaEl = document.getElementById('inFecha');
+      const horaEl  = document.getElementById('inHora');
+      if (fechaEl && !fechaEl.value) fechaEl.value = today;
+      if (horaEl && !horaEl.value)  horaEl.value  = time;
+
+      document.getElementById('formReg')?.addEventListener('submit', function() {
+        const btn = document.getElementById('btnConfirm');
+        btn.innerHTML = '<span>⏳</span> Registrando…';
+        // Usar setTimeout para evitar cancelar el submit en algunos navegadores móviles (iOS Safari)
+        setTimeout(() => {
+          btn.disabled = true;
+        }, 0);
+      });
+    })();
+  </script>
+</body>
+</html>
