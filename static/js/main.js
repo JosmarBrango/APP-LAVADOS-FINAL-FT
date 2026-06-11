@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data && data.vehiculos) {
       state.vehiculos   = data.vehiculos;
       state.historial   = data.historial_lavados || [];
+      state.historial_lavados = state.historial;
     }
     if (stats && !stats.error) {
       state.serverStats = stats;
@@ -147,24 +148,35 @@ function updateUI() {
   renderPromedios();
   renderVehiculos();
   renderHistorial();
-  // Programación se renderiza solo cuando el tab está activo o se cambia el mes
   if (state.view === 'programacion') renderProgramacion();
+  if (state.view === 'personal')     renderPersonal();
+  if (state.view === 'lavados')      renderTodosLavados();
 }
 
 function populateFilters() {
   const muns = getMunicipios();
   const promMun = document.getElementById('promMun');
   const vehMun  = document.getElementById('vehMun');
-  const selProm = promMun.value;
-  const selVeh  = vehMun.value;
+  const lavMun2 = document.getElementById('lavMun2');
+  const selProm = promMun ? promMun.value : '';
+  const selVeh  = vehMun  ? vehMun.value  : '';
+  const selLav  = lavMun2 ? lavMun2.value : '';
 
   const opts = '<option value="">Todos los municipios</option>' +
                muns.map(m => `<option value="${m}">${m}</option>`).join('');
-  promMun.innerHTML = opts;
-  vehMun.innerHTML  = opts;
+  if (promMun) { promMun.innerHTML = opts; if (muns.includes(selProm)) promMun.value = selProm; }
+  if (vehMun)  { vehMun.innerHTML  = opts; if (muns.includes(selVeh))  vehMun.value  = selVeh; }
+  if (lavMun2) { lavMun2.innerHTML  = opts; if (muns.includes(selLav))  lavMun2.value  = selLav; }
 
-  if (muns.includes(selProm)) promMun.value = selProm;
-  if (muns.includes(selVeh))  vehMun.value  = selVeh;
+  // Populate lavadores filter
+  const lavPersonal = document.getElementById('lavPersonal');
+  if (lavPersonal) {
+    const lavs = [...new Set((state.historial || []).map(h => h.lavador).filter(Boolean))].sort();
+    const cur = lavPersonal.value;
+    lavPersonal.innerHTML = '<option value="">Todos los lavadores</option>' +
+      lavs.map(l => `<option value="${l}">${l}</option>`).join('');
+    if (lavs.includes(cur)) lavPersonal.value = cur;
+  }
 }
 
 // ─── Navegación ───────────────────────────────────────────────────────────────
@@ -173,7 +185,9 @@ const VIEWS_TITLES = {
   promedios:     'Promedios por día',
   programacion:  'Propuesta de programación',
   vehiculos:     'Gestión de vehículos',
-  historial:     'Historial y Escáner QR'
+  lavados:       'Todos los lavados',
+  historial:     'Historial y Escáner QR',
+  reportes:      'Centro de Reportes'
 };
 
 function showView(id, btnEl) {
@@ -182,8 +196,10 @@ function showView(id, btnEl) {
   if (btnEl) btnEl.classList.add('active');
   document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
   document.getElementById(`view-${id}`).classList.add('active');
-  document.getElementById('tbTitle').textContent = VIEWS_TITLES[id];
+  document.getElementById('tbTitle').textContent = VIEWS_TITLES[id] || id;
   if (id === 'programacion') renderProgramacion();
+  if (id === 'personal')     renderPersonal();
+  if (id === 'lavados')      renderTodosLavados();
 }
 
 // ─── Vista Diagnóstico ────────────────────────────────────────────────────────
@@ -205,6 +221,19 @@ function renderDiagnostico() {
   const n_meses = state.serverStats?.n_meses ?? 3;
   const muns = [...new Set(state.vehiculos.map(v => v.mun).filter(isValidMun))].sort();
 
+  window.toggleMunRow = function(id, el) {
+    const row = document.getElementById('munRow_' + id);
+    if (row) {
+      if (row.style.display === 'none') {
+        row.style.display = 'table-row';
+        el.querySelector('.arrow-icon').textContent = '▼';
+      } else {
+        row.style.display = 'none';
+        el.querySelector('.arrow-icon').textContent = '▶';
+      }
+    }
+  };
+
   document.getElementById('diagBody').innerHTML = muns.map(mun => {
     const vv  = state.vehiculos.filter(v => v.mun === mun);
     const lav = vv.reduce((a, v) => a + v.lavGen, 0);
@@ -213,9 +242,14 @@ function renderDiagnostico() {
     const pct  = meta > 0 ? ((lav / meta) * 100).toFixed(1) : 0;
     const barCls  = parseFloat(pct) < 33 ? 'crit' : parseFloat(pct) < 66 ? 'warn' : 'ok';
     const badgeCls = sin > 0 ? 'b-crit' : 'b-ok';
+    
+    // Lista de vehículos
+    const vehiculosList = vv.map(v => `<span class="badge b-info" style="margin:2px">${v.placa}</span>`).join('');
+    const idSaf = mun.replace(/[^a-zA-Z0-9]/g, '_');
+
     return `
-      <tr>
-        <td style="font-weight:500">${mun}</td>
+      <tr onclick="toggleMunRow('${idSaf}', this)" style="cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+        <td style="font-weight:500"><span class="arrow-icon" style="font-size:10px; color:var(--muted); margin-right:4px;">▶</span> ${mun}</td>
         <td><span class="badge b-info">${vv.length}</span></td>
         <td><span style="font-family:var(--mono);font-size:13px">${lav}</span></td>
         <td><span class="badge ${badgeCls}">${sin}</span></td>
@@ -224,6 +258,12 @@ function renderDiagnostico() {
             <div class="bar-bg"><div class="bar-fill ${barCls}" style="width:${pct}%"></div></div>
             <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${pct}%</span>
           </div>
+        </td>
+      </tr>
+      <tr id="munRow_${idSaf}" style="display:none; background:var(--bg);">
+        <td colspan="5" style="padding:16px;">
+          <div style="font-size:12px; font-weight:600; color:var(--muted); margin-bottom:8px;">Vehículos asignados en ${mun} (${vv.length}):</div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px;">${vehiculosList}</div>
         </td>
       </tr>`;
   }).join('');
@@ -282,6 +322,107 @@ function renderPromedios() {
         </td>
       </tr>`;
   }).join('');
+}
+
+// ─── Vista Personal y Rendimiento ─────────────────────────────────────────────
+function renderPersonal() {
+  const historial = state.historial_lavados || [];
+  
+  const TODOS_LAVADORES = [
+    "ELIFELE SIMANCA",
+    "HADER CORREA",
+    "LUIS GOMEZ",
+    "JAIDER MORENO",
+    "MOISES GOMEZ",
+    "JORGE ARROYO"
+  ];
+  
+  // Agrupar por lavador
+  const lavadores = {};
+  TODOS_LAVADORES.forEach(name => lavadores[name] = []);
+  
+  historial.forEach(h => {
+    if (!h.lavador) return;
+    if (!lavadores[h.lavador]) lavadores[h.lavador] = [];
+    lavadores[h.lavador].push(h);
+  });
+
+  const view = document.getElementById('view-personal');
+  let html = `
+    <div class="sec-hdr" style="margin-top: 0; margin-bottom: 32px;">
+      <div class="sec-title" style="font-size: 28px; font-weight: 800; letter-spacing:-0.02em; color:var(--text);">Registro de Lavadores</div>
+      <div style="color: var(--muted); font-size: 15px; margin-top: 6px; font-weight:500;">Historial detallado de los vehículos gestionados por cada integrante del equipo.</div>
+    </div>
+  `;
+
+  html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 24px; padding-bottom: 40px;">';
+
+  // Generar sección para cada lavador
+  for (const [name, lavados] of Object.entries(lavadores).sort((a,b) => a[0].localeCompare(b[0]))) {
+    let listHtml = '';
+    
+    if (lavados.length === 0) {
+      listHtml = `
+        <div style="display:flex; justify-content:center; align-items:center; padding: 40px 0; color: var(--muted2); font-weight: 600; font-size: 14px; text-align: center; border: 2px dashed var(--border); border-radius: 12px; margin-bottom: 12px;">
+          Sin lavados registrados
+        </div>
+      `;
+    } else {
+      listHtml = lavados.map((l, index) => {
+        const tipo = l.tipo_lavado || 'General';
+        let badgeBg = 'rgba(59,130,246,0.1)';
+        let badgeColor = '#2563eb';
+        if(tipo.toLowerCase().includes('sencillo')) { badgeBg = 'rgba(16,185,129,0.1)'; badgeColor = '#059669'; }
+        if(tipo.toLowerCase().includes('enjuague')) { badgeBg = 'rgba(245,158,11,0.1)'; badgeColor = '#d97706'; }
+
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px 0; border-bottom: ${index === lavados.length - 1 ? 'none' : '1px solid var(--border)'}; gap: 12px; transition: background 0.2s; border-radius: 8px;">
+            <div style="display:flex; align-items:center; gap: 16px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:16px; border:1px solid var(--border2); box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                🚐
+              </div>
+              <div>
+                <div style="font-weight: 800; color: var(--text); font-size: 16px; letter-spacing: -0.01em;">${l.placa}</div>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500;">
+                  <span style="display:inline-block; margin-right:8px;">📅 ${l.fecha}</span> 
+                  <span>⏱️ ${l.hora_inicio || '--'} a ${l.hora_fin || '--'}</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <span style="font-size:11px; font-weight:700; padding:6px 14px; border-radius:20px; background: ${badgeBg}; color: ${badgeColor}; text-transform:uppercase; letter-spacing:0.05em;">${tipo}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    html += `
+      <div style="background: #ffffff; border-radius: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); transition: transform 0.3s ease, box-shadow 0.3s ease; display:flex; flex-direction:column; max-height:450px;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 40px rgba(0,0,0,0.08), 0 8px 12px rgba(0,0,0,0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 30px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.02)';">
+        <div style="padding: 24px; background: linear-gradient(to right, #f8fafc, #ffffff); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 52px; height: 52px; border-radius: 16px; background: var(--blue-dim); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
+              🧑‍🔧
+            </div>
+            <div>
+              <div style="font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">${name}</div>
+              <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;">Especialista de Lavado</div>
+            </div>
+          </div>
+          <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
+            <div style="font-size: 22px; font-weight: 800; color: var(--blue); line-height: 1;">${lavados.length}</div>
+            <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Lavados</div>
+          </div>
+        </div>
+        <div style="padding: 0 24px; overflow-y: auto; flex-grow:1; margin-top: 16px;">
+          ${listHtml}
+        </div>
+      </div>
+    `;
+  }
+  
+  html += '</div>';
+  view.innerHTML = html;
 }
 
 // ─── Vista Programación Kanban ────────────────────────────────────────────────
@@ -369,14 +510,33 @@ function renderKanbanBoard(prog, days) {
     }
   });
 
-  const renderMiniCard = (v) => {
-    const turnoCls = (v.turno && v.turno.cls) ? v.turno.cls : 'noday';
+  const renderMiniCard = (v, d) => {
+    // Rediseño minimalista: Fondo blanco, borde suave, línea lateral o punto
+    const color = v.turno?.color || '#cbd5e1';
+    
+    // Generar texto para el tooltip (hover)
+    let tooltip = `Placa: ${v.placa}\nMunicipio: ${v.mun}\nRuta: ${v.ruta}`;
+    if (d && v.horaDow) {
+      const dateObj = new Date(d + 'T12:00:00');
+      const dow = dateObj.getDay();
+      const hw = v.horaDow[String(dow)];
+      if (hw && hw.s) {
+        tooltip += `\n\nHora esperada de lavado: ${hw.s} (basado en ${hw.n} registros)`;
+      } else {
+        tooltip += `\n\nHora esperada: Sin historial para este día de la semana`;
+      }
+    } else if (!d) {
+      tooltip += `\n\n(Asígnale un día para calcular su hora esperada)`;
+    }
+    
     return `
-      <div class="prog-card mini t-${turnoCls}" draggable="true" ondragstart="onDragStart(event, '${v.placa}')" ondragend="onDragEnd(event)" id="veh-${v.placa}" style="margin-bottom:8px;background:var(--card);padding:10px;border-radius:8px;border-left:4px solid ${v.turno?.color || '#ccc'};box-shadow:0 1px 3px rgba(0,0,0,0.05);cursor:grab;transition:transform 0.1s;">
-        <div class="prog-placa" style="font-weight:700;font-size:14px;color:var(--text);display:flex;justify-content:space-between;">
-           ${v.placa} <span class="badge ${bCls(v.lavGen)}" style="font-size:9px">${v.lavGen} lav.</span>
+      <div class="prog-card mini" title="${tooltip}" draggable="true" ondragstart="onDragStart(event, '${v.placa}')" ondragend="onDragEnd(event)" id="veh-${v.placa}" style="margin-bottom:8px;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);cursor:grab;transition:transform 0.1s;position:relative;">
+        <div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;background:${color};border-radius:0 3px 3px 0;"></div>
+        <div class="prog-placa" style="font-weight:600;font-size:14px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding-left:8px;">
+           ${v.placa} 
+           <span style="font-size:11px;color:var(--muted);background:var(--bg);padding:2px 6px;border-radius:6px;border:1px solid var(--border2);">${v.lavGen} lav.</span>
         </div>
-        <div class="prog-meta" style="font-size:11px;color:var(--muted);margin-top:4px;">${v.mun} · ${v.ruta}</div>
+        <div class="prog-meta" style="font-size:11px;color:var(--muted);margin-top:6px;padding-left:8px;">${v.mun} · ${v.ruta}</div>
       </div>
     `;
   };
@@ -385,15 +545,15 @@ function renderKanbanBoard(prog, days) {
   
   // Columna: Sin asignar
   html += `
-    <div class="kanban-col" style="flex:0 0 240px;background:#f8fafc;border-radius:12px;padding:12px;display:flex;flex-direction:column;height:100%;border:2px dashed #e2e8f0;transition:border-color 0.2s;"
+    <div id="unassignedPanel" class="kanban-col" style="background:transparent;border-radius:12px;display:flex;flex-direction:column;height:100%;border:1px dashed var(--border2);transition:opacity 0.2s;"
          ondragover="onDragOverUnassigned(event, this)" 
          ondragleave="onDragLeaveUnassigned(event, this)" 
          ondrop="onDrop(event, null)">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#64748b;">
-        Sin Asignar <span class="badge b-crit" style="font-size:10px;float:right">${unassigned.length}</span>
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text);padding:12px 12px 0;">
+        Vehículos sin asignar <span style="font-size:11px;color:var(--muted);float:right">${unassigned.length}</span>
       </div>
-      <div style="overflow-y:auto;flex-grow:1;min-height:100px;">
-        ${unassigned.map(renderMiniCard).join('')}
+      <div style="overflow-y:auto;flex-grow:1;min-height:100px;padding:0 12px 12px;">
+        ${unassigned.map(v => renderMiniCard(v, null)).join('')}
       </div>
     </div>
   `;
@@ -406,23 +566,50 @@ function renderKanbanBoard(prog, days) {
     const dayLabel = `${DOW_FULL[dateObj.getDay()]} ${dateObj.getDate()} ${NOMBRES_MESES[dateObj.getMonth()].substr(0,3)}`;
     
     html += `
-      <div class="kanban-col ${isFull ? 'full' : ''}" style="flex:0 0 240px;background:#f1f5f9;border-radius:12px;padding:12px;display:flex;flex-direction:column;height:100%;border:1px solid #e2e8f0;transition:all 0.2s;"
+      <div class="kanban-col ${isFull ? 'full' : ''}" style="background:var(--surface);border-radius:12px;display:flex;flex-direction:column;height:100%;border:1px solid var(--border);transition:border-color 0.2s;"
            ondragover="onDragOver(event, this, ${items.length})" 
            ondragleave="onDragLeave(event, this)" 
            ondrop="onDrop(event, '${d}')"
            data-day="${d}">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:12px 12px 0;">
           ${dayLabel}
-          <span style="font-size:11px;font-weight:600;color:var(--muted);background:#e2e8f0;padding:2px 6px;border-radius:10px;">${items.length}/4</span>
+          <span style="font-size:11px;color:var(--muted);">${items.length}/4</span>
         </div>
-        <div style="overflow-y:auto;flex-grow:1;min-height:100px;">
-          ${items.map(renderMiniCard).join('')}
+        <div style="overflow-y:auto;flex-grow:1;min-height:100px;padding:0 12px 12px;">
+          ${items.map(v => renderMiniCard(v, d)).join('')}
         </div>
       </div>
     `;
   });
 
   body.innerHTML = html;
+  
+  // Lógica de mostrar/ocultar "Sin asignar"
+  const btn = document.getElementById('toggleUnassignedBtn');
+  btn.style.display = 'inline-flex';
+  const panel = document.getElementById('unassignedPanel');
+  
+  // Por defecto, si hay programación lista, esconder el panel de sin asignar
+  if (Object.keys(assigned).length > 0) {
+    panel.style.display = 'none';
+    btn.textContent = 'Mostrar Vehículos Sin Asignar';
+  } else {
+    panel.style.display = 'flex';
+    btn.textContent = 'Ocultar Vehículos Sin Asignar';
+  }
+}
+
+window.toggleUnassigned = function() {
+  const panel = document.getElementById('unassignedPanel');
+  const btn = document.getElementById('toggleUnassignedBtn');
+  if (!panel) return;
+  if (panel.style.display === 'none') {
+    panel.style.display = 'flex';
+    btn.textContent = 'Ocultar Vehículos Sin Asignar';
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = 'Mostrar Vehículos Sin Asignar';
+  }
 }
 
 // Drag & Drop Kanban
@@ -636,8 +823,9 @@ function closeModal(id) {
 
 function showToast(msg, type = "good") {
   const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.className   = `toast open ${type}`;
+  const msgEl = document.getElementById('toastMsg');
+  if (msgEl) msgEl.textContent = msg; else toast.textContent = msg;
+  toast.className = `toast open ${type}`;
   setTimeout(() => { toast.className = 'toast'; }, 3500);
 }
 
@@ -699,10 +887,13 @@ async function saveLavado(e) {
   e.preventDefault();
   const placa = document.getElementById('mlPlaca').value.toUpperCase();
   const fecha = document.getElementById('mlFecha').value;
-  const hora  = document.getElementById('mlHora').value;
+  const hora_inicio  = document.getElementById('mlHoraInicio').value;
+  const hora_fin = document.getElementById('mlHoraFin').value;
+  const tipo_lavado = document.getElementById('mlTipoLavado').value;
+  const lavador = document.getElementById('mlLavador').value;
 
   try {
-    const res    = await fetch('/api/lavado/add_manual', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ placa, fecha, hora }) });
+    const res    = await fetch('/api/lavado/add_manual', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ placa, fecha, hora_inicio, hora_fin, tipo_lavado, lavador }) });
     const result = await res.json();
     if (result.error) { showToast(result.error, 'err'); }
     else { showToast(`Lavado registrado para ${placa}`); await updateVehiculos(result); closeModal('modalLavado'); }
@@ -755,31 +946,42 @@ async function importCSV(e) {
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
 
-async function descargarPDF() {
-  if (!state.progConfig) {
-    return showToast('Primero debes generar la programación en el tablero', 'err');
+async function descargarPDF(tipo_reporte, btnEl) {
+  let start_date, end_date, placas = [], maxDia = 4, responsable = '';
+  const today = new Date().toISOString().split('T')[0];
+
+  if (tipo_reporte === 'programacion') {
+    if (!state.progConfig) {
+      return showToast('Primero genera la programación en la pestaña "Propuesta de programación"', 'err');
+    }
+    start_date  = state.progConfig.start_date;
+    end_date    = state.progConfig.end_date;
+    placas      = state.progConfig.placas;
+    maxDia      = document.getElementById('pdfMaxDia')?.value || 4;
+    responsable = (document.getElementById('pdfRespProg')?.value.trim() || '');
+  } else if (tipo_reporte === 'diagnostico') {
+    start_date  = today;
+    end_date    = today;
+    responsable = (document.getElementById('pdfRespDiag')?.value.trim() || '');
+  } else if (tipo_reporte === 'lavadores') {
+    start_date  = today;
+    end_date    = today;
+    responsable = (document.getElementById('pdfRespLav')?.value.trim() || '');
+  } else if (tipo_reporte === 'flota') {
+    start_date  = today;
+    end_date    = today;
+    responsable = (document.getElementById('pdfRespFlota')?.value.trim() || '');
   }
 
-  const { start_date, end_date, placas } = state.progConfig;
-  const maxDia      = document.getElementById('pdfMaxDia').value;
-  const responsable = encodeURIComponent(document.getElementById('pdfResponsable').value.trim());
-
-  const btn = document.getElementById('pdfBtn');
-  const originalText = btn.innerHTML;
-  btn.disabled   = true;
-  btn.innerHTML  = '⏳ Generando PDF…';
+  const originalText = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '⏳ Generando…';
 
   try {
     const res = await fetch(`/exportar-pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        start_date,
-        end_date,
-        placas,
-        max_dia: maxDia,
-        responsable
-      })
+      body: JSON.stringify({ start_date, end_date, placas, max_dia: maxDia, responsable, tipo_reporte })
     });
 
     if (!res.ok) {
@@ -788,24 +990,27 @@ async function descargarPDF() {
       return;
     }
 
-    // Descargar el archivo
-    const blob     = await res.blob();
-    const objUrl   = URL.createObjectURL(blob);
-    const link     = document.createElement('a');
-    link.href      = objUrl;
-    link.download  = `Reporte_Lavados_${start_date}_al_${end_date}.pdf`;
+    const blob   = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const link   = document.createElement('a');
+    link.href    = objUrl;
+    const nombres = {
+      diagnostico: `Diagnostico_${today}.pdf`,
+      programacion: `Programacion_${start_date}_al_${end_date}.pdf`,
+      lavadores: `Lavadores_${today}.pdf`,
+      flota: `Flota_${today}.pdf`
+    };
+    link.download = nombres[tipo_reporte] || `Reporte_${today}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(objUrl);
-
-    showToast('✓ Reporte PDF descargado correctamente');
-    closeModal('modalPDF');
+    showToast('✓ PDF descargado correctamente');
   } catch (e) {
     showToast('Error de conexión al generar el PDF', 'err');
   } finally {
-    btn.disabled  = false;
-    btn.innerHTML = originalText;
+    btnEl.disabled  = false;
+    btnEl.innerHTML = originalText;
   }
 }
 
@@ -819,11 +1024,17 @@ function renderHistorial() {
                      r.origen === 'dashboard_sumar' ? '<span class="badge b-warn" style="font-size:10px">App (Botón +)</span>' : 
                      '<span class="badge b-info" style="font-size:10px">Manual</span>';
                      
+    const tipo = r.tipo_lavado || 'General';
+    const lavador = r.lavador || 'N/D';
+    const horas = (r.hora_inicio && r.hora_fin) ? `${r.hora_inicio} - ${r.hora_fin}` : (r.hora || 'N/D');
+    
     return `
       <tr>
         <td><span class="placa">${r.placa}</span></td>
+        <td>${tipo}</td>
+        <td>${lavador}</td>
         <td style="font-family:var(--mono)">${r.fecha}</td>
-        <td style="font-family:var(--mono);font-weight:600">${r.hora}</td>
+        <td style="font-family:var(--mono);font-weight:600">${horas}</td>
         <td>${origenHtml}</td>
       </tr>
     `;
@@ -872,8 +1083,8 @@ function onScanSuccess(decodedText, decodedResult) {
     
     document.getElementById('mlPlaca').value = placa;
     document.getElementById('mlFecha').value = today;
-    document.getElementById('mlHora').value  = time;
-    
+    document.getElementById('mlHoraInicio').value = time;
+    document.getElementById('mlHoraFin').value = time;
     openModal('modalLavado');
     showToast(`QR detectado: ${placa}. Confirma el lavado.`, 'good');
   } else {
@@ -884,3 +1095,135 @@ function onScanSuccess(decodedText, decodedResult) {
 function onScanFailure(error) {
   // Ignore errors as it parses each frame
 }
+
+// ─── Vista: Todos los Lavados ──────────────────────────────────────────────
+function renderTodosLavados() {
+  const historial = state.historial || [];
+  const filterTipo = document.getElementById('lavTipo')?.value || '';
+  const filterLav  = document.getElementById('lavPersonal')?.value || '';
+  const filterMun  = document.getElementById('lavMun2')?.value || '';
+  const search     = (document.getElementById('lavSearch')?.value || '').toLowerCase();
+
+  // Build municipio map
+  const munMap = {};
+  (state.vehiculos || []).forEach(v => munMap[v.placa] = v.mun);
+
+  let data = [...historial];
+  if (filterTipo) data = data.filter(h => (h.tipo_lavado || 'General') === filterTipo);
+  if (filterLav)  data = data.filter(h => h.lavador === filterLav);
+  if (filterMun)  data = data.filter(h => munMap[h.placa] === filterMun);
+  if (search)     data = data.filter(h =>
+    (h.placa || '').toLowerCase().includes(search) ||
+    (h.lavador || '').toLowerCase().includes(search)
+  );
+
+  const countEl = document.getElementById('lavCount');
+  if (countEl) countEl.textContent = `${data.length} registros`;
+
+  const origMap = {
+    qr_registro:      'QR (campo)',
+    dashboard_manual: 'Manual (app)',
+    dashboard_sumar:  'Botón +'
+  };
+
+  const tipoCls = { General: 'b-ok', Sencillo: 'b-info', Enjuague: 'b-warn' };
+
+  const bodyEl = document.getElementById('lavBody');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = data.map(r => {
+    const tipo   = r.tipo_lavado || 'General';
+    const cls    = tipoCls[tipo] || 'b-info';
+    const horas  = (r.hora_inicio && r.hora_fin) ? `${r.hora_inicio} — ${r.hora_fin}` : (r.hora || 'N/D');
+    const mun    = munMap[r.placa] || 'N/D';
+    const origen = origMap[r.origen] || r.origen || 'N/D';
+    return `
+      <tr>
+        <td><span class="placa">${r.placa}</span></td>
+        <td style="font-size:12px;color:var(--muted)">${mun}</td>
+        <td><span class="badge ${cls}">${tipo}</span></td>
+        <td style="font-weight:500">${r.lavador || 'N/D'}</td>
+        <td style="font-family:var(--mono);font-size:12px">${r.fecha}</td>
+        <td style="font-family:var(--mono);font-size:12px">${horas}</td>
+        <td><span class="badge b-info" style="font-size:10px">${origen}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+// ─── QR Polling & Alertas en Tiempo Real ──────────────────────────────────
+let _lastQrTs = null;
+
+async function _initQrPolling() {
+  // Capture current timestamp silently (no alert on first load)
+  try {
+    const res  = await fetch('/api/last-qr-event');
+    const data = await res.json();
+    if (data.event) _lastQrTs = data.event.timestamp;
+  } catch(e) {}
+
+  // Poll every 8 seconds
+  setInterval(async () => {
+    try {
+      const res  = await fetch('/api/last-qr-event');
+      const data = await res.json();
+      if (data.event && data.event.timestamp !== _lastQrTs) {
+        _lastQrTs = data.event.timestamp;
+        _showQrAlert(data.event);
+        // Refresh data
+        const dr = await fetch('/api/data');
+        const dd = await dr.json();
+        if (dd && dd.vehiculos) {
+          state.vehiculos = dd.vehiculos;
+          state.historial = dd.historial_lavados || [];
+          populateFilters();
+          updateUI();
+        }
+      }
+    } catch(e) {}
+  }, 8000);
+}
+
+function _showQrAlert(event) {
+  const alertEl = document.getElementById('qrAlert');
+  if (!alertEl) return;
+
+  document.getElementById('qaPlaca').textContent   = event.placa      || '—';
+  document.getElementById('qaLavador').textContent = event.lavador     || 'N/D';
+  document.getElementById('qaTipo').textContent    = event.tipo_lavado || 'General';
+
+  _playNotificationSound();
+
+  alertEl.classList.add('show');
+  clearTimeout(window._qrAlertTimer);
+  window._qrAlertTimer = setTimeout(() => alertEl.classList.remove('show'), 9000);
+}
+
+function closeQrAlert() {
+  const alertEl = document.getElementById('qrAlert');
+  if (alertEl) alertEl.classList.remove('show');
+  clearTimeout(window._qrAlertTimer);
+}
+
+function _playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1100].forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.2);
+      osc.start(ctx.currentTime + i * 0.12);
+      osc.stop(ctx.currentTime + i * 0.12 + 0.22);
+    });
+  } catch(e) {}
+}
+
+// ─── Inicializar polling cuando carga la app ──────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Se llama aquí para asegurar que se ejecuta después del DOMContentLoaded principal
+  // El DOMContentLoaded de arriba ya carga los datos; este encola el polling.
+  setTimeout(_initQrPolling, 1500);
+});

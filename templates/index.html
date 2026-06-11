@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flota Urabá - Panel de Lavados</title>
+<title>Flota Urabá — Panel de Lavados</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -12,147 +12,168 @@
 <body>
 
 <div class="app">
-  <!-- SIDEBAR OVERLAY -->
-  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sb-brand">
-      <div class="sb-icon">🚛</div>
-      <div class="sb-name">Flota Urabá</div>
-      <div class="sb-sub">Panel de Lavados</div>
+  <!-- Mobile overlay -->
+  <div class="sidebar-overlay" onclick="closeSidebarMobile()"></div>
+
+  <!-- ═══ SIDEBAR ════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand + Collapse -->
+    <div class="sb-header">
+      <div class="sb-brand">
+        <div class="sb-logo">🚛</div>
+        <div class="sb-brand-info">
+          <div class="sb-name">Flota Urabá</div>
+          <div class="sb-sub">Panel de Lavados</div>
+        </div>
+      </div>
+      <button class="sb-collapse-btn" onclick="toggleSidebarCollapse()" title="Colapsar menú">‹</button>
     </div>
+
+    <!-- Navigation -->
     <nav class="sb-nav">
-      <div class="nav-lbl">Vistas</div>
-      <button class="nav-item active" onclick="showView('diagnostico', this)">
-        <span class="nav-dot"></span>Diagnóstico general
-      </button>
-      <button class="nav-item" onclick="showView('promedios', this)">
-        <span class="nav-dot"></span>Promedios por día
-      </button>
-      <button class="nav-item" onclick="showView('programacion', this)">
-        <span class="nav-dot"></span>Propuesta de programación
-      </button>
-      <button class="nav-item" onclick="showView('vehiculos', this)">
-        <span class="nav-dot"></span>Gestión de vehículos
-      </button>
-      <button class="nav-item" onclick="showView('historial', this)">
-        <span class="nav-dot"></span>Historial / Escáner
-      </button>
-      
-      <div class="nav-lbl" style="margin-top: 12px">Acciones</div>
-      <button class="nav-item" onclick="openModal('modalVehicle')">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--em); flex-shrink: 0; opacity: 0.6"></span>
-        Agregar vehículo
-      </button>
-      <button class="nav-item" onclick="openModal('modalLavado')">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex-shrink: 0; opacity: 0.6"></span>
-        Registrar lavado
-      </button>
-      <button class="nav-item" onclick="openModal('modalImport')">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex-shrink: 0; opacity: 0.6"></span>
-        Importar CSV
-      </button>
-      <button class="nav-item" onclick="openModal('modalPDF')">
-        <span style="width: 7px; height: 7px; border-radius: 50%; background: #f85149; flex-shrink: 0; opacity: 0.7"></span>
-        Exportar PDF
-      </button>
+
+      <div class="nav-group active">
+        <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+          <span class="ng-text">Vistas</span><span class="ng-arrow">▼</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item active" onclick="showView('diagnostico', this)" data-tooltip="Diagnóstico general">
+            <span class="nav-icon">📊</span><span class="nav-text">Diagnóstico general</span>
+          </button>
+          <button class="nav-item" onclick="showView('promedios', this)" data-tooltip="Promedios por día">
+            <span class="nav-icon">🔥</span><span class="nav-text">Promedios por día</span>
+          </button>
+          <button class="nav-item" onclick="showView('programacion', this)" data-tooltip="Propuesta de programación">
+            <span class="nav-icon">📅</span><span class="nav-text">Propuesta de programación</span>
+          </button>
+          <button class="nav-item" onclick="showView('vehiculos', this)" data-tooltip="Gestión de vehículos">
+            <span class="nav-icon">🚛</span><span class="nav-text">Gestión de vehículos</span>
+          </button>
+          <button class="nav-item" onclick="showView('lavados', this)" data-tooltip="Todos los lavados">
+            <span class="nav-icon">🧼</span><span class="nav-text">Todos los lavados</span>
+          </button>
+          <button class="nav-item" onclick="showView('historial', this)" data-tooltip="Historial / Escáner QR">
+            <span class="nav-icon">📷</span><span class="nav-text">Historial / Escáner QR</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-group active">
+        <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+          <span class="ng-text">Métricas</span><span class="ng-arrow">▼</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item" onclick="showView('reportes', this)" data-tooltip="Centro de Reportes">
+            <span class="nav-icon">📄</span><span class="nav-text">Centro de Reportes</span>
+          </button>
+          <button class="nav-item" onclick="showView('personal', this)" data-tooltip="Personal y Rendimiento">
+            <span class="nav-icon">🏆</span><span class="nav-text">Personal y Rendimiento</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-group active">
+        <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+          <span class="ng-text">Herramientas</span><span class="ng-arrow">▼</span>
+        </button>
+        <div class="nav-group-items">
+          <button class="nav-item" onclick="openModal('modalImport')" data-tooltip="Importar CSV">
+            <span class="nav-icon">📂</span><span class="nav-text">Importar CSV</span>
+          </button>
+        </div>
+      </div>
+
     </nav>
+
+    <!-- Footer Stats -->
     <div class="sb-footer">
       <div class="ft-stat"><span class="ft-lbl">Vehículos</span><span class="ft-val" id="ftTotal">—</span></div>
       <div class="ft-stat"><span class="ft-lbl">Sin lavado gral.</span><span class="ft-val crit" id="ftSinLav">—</span></div>
       <div class="ft-stat"><span class="ft-lbl">Cumplimiento</span><span class="ft-val crit" id="ftCumplimiento">—</span></div>
-      <div class="ft-stat"><span class="ft-lbl">Lavados realizados</span><span class="ft-val ok" id="ftRealizados">—</span></div>
+      <div class="ft-stat"><span class="ft-lbl">Realizados</span><span class="ft-val ok" id="ftRealizados">—</span></div>
     </div>
   </aside>
 
-  <!-- MAIN -->
-  <main class="main">
+  <!-- ═══ MAIN ═══════════════════════════════════════════════════ -->
+  <main class="main" id="main">
+    <!-- Topbar -->
     <div class="topbar">
-      <div style="display: flex; align-items: center;">
-        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="tb-left">
+        <button class="menu-toggle" onclick="openSidebarMobile()">☰</button>
         <div>
           <div class="tb-title" id="tbTitle">Diagnóstico general</div>
           <div class="tb-sub" id="tbSub">Zona Urabá · 0 vehículos</div>
         </div>
       </div>
-      <div class="tb-badge" id="tbBadge" style="display:none"><div class="pulse"></div><span id="tbBadgeText">0 lavados generales pendientes</span></div>
+      <div class="tb-badge" id="tbBadge" style="display:none">
+        <div class="pulse"></div><span id="tbBadgeText">0 lavados generales pendientes</span>
+      </div>
     </div>
 
-    <!-- Empty State -->
-    <div id="loadingState" style="display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--muted);">Cargando datos…</div>
+    <!-- Loading -->
+    <div id="loadingState" style="display:flex;align-items:center;justify-content:center;height:calc(100vh - 64px);color:var(--muted);font-size:15px;gap:12px;">
+      <span style="animation:pulse 1.2s infinite">⏳</span> Cargando datos…
+    </div>
 
+    <!-- Content -->
     <div class="content" id="mainContent" style="display:none">
-      <!-- KPIs -->
-      <div class="kpi-grid">
-        <div class="kpi danger">
-          <div class="kpi-lbl">Lavados generales</div>
-          <div class="kpi-val" id="kpiRealizados">0</div>
-          <div class="kpi-s" id="kpiMeta">meta: 0</div>
-          <div class="kpi-ico">🧼</div>
-        </div>
-        <div class="kpi danger">
-          <div class="kpi-lbl">Déficit acumulado</div>
-          <div class="kpi-val" id="kpiDeficit">0</div>
-          <div class="kpi-s">lavados faltantes</div>
-          <div class="kpi-ico">⚠️</div>
-        </div>
-        <div class="kpi warn">
-          <div class="kpi-lbl">Sin ningún lavado</div>
-          <div class="kpi-val" id="kpiSinLav">0</div>
-          <div class="kpi-s" id="kpiSinLavSub">0% de la flota</div>
-          <div class="kpi-ico">🚛</div>
-        </div>
-        <div class="kpi info">
-          <div class="kpi-lbl">Cumplimiento</div>
-          <div class="kpi-val" style="font-size: 26px" id="kpiCumplimiento">0%</div>
-          <div class="kpi-s" id="kpiCumplimientoSub">0 de 0 requeridos</div>
-          <div class="kpi-ico">📊</div>
-        </div>
-      </div>
 
-      <!-- VISTA: Diagnóstico -->
+      <!-- ─── VISTA: Diagnóstico ─────────────────────────────── -->
       <div id="view-diagnostico" class="section active">
+        <div class="kpi-grid">
+          <div class="kpi danger">
+            <div class="kpi-lbl">Lavados generales</div>
+            <div class="kpi-val" id="kpiRealizados">0</div>
+            <div class="kpi-s" id="kpiMeta">meta: 0</div>
+            <div class="kpi-ico">🧼</div>
+          </div>
+          <div class="kpi danger">
+            <div class="kpi-lbl">Déficit acumulado</div>
+            <div class="kpi-val" id="kpiDeficit">0</div>
+            <div class="kpi-s">lavados faltantes</div>
+            <div class="kpi-ico">⚠️</div>
+          </div>
+          <div class="kpi warn">
+            <div class="kpi-lbl">Sin ningún lavado</div>
+            <div class="kpi-val" id="kpiSinLav">0</div>
+            <div class="kpi-s" id="kpiSinLavSub">0% de la flota</div>
+            <div class="kpi-ico">🚛</div>
+          </div>
+          <div class="kpi info">
+            <div class="kpi-lbl">Cumplimiento</div>
+            <div class="kpi-val" style="font-size:28px" id="kpiCumplimiento">0%</div>
+            <div class="kpi-s" id="kpiCumplimientoSub">0 de 0 requeridos</div>
+            <div class="kpi-ico">📊</div>
+          </div>
+        </div>
         <div class="sec-hdr">
           <div class="sec-title">Resumen por municipio</div>
           <div class="sec-line"></div>
-          <button class="btn btn-danger" onclick="openModal('modalPDF')" style="padding:4px 10px;font-size:11px;margin-right:8px;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);color:var(--red)">
-            📄 Reporte PDF
-          </button>
           <div class="sec-badge" id="diagTotalVeh">0 vehículos</div>
         </div>
         <div class="table-wrap">
           <table class="tbl">
             <thead>
               <tr>
-                <th>Municipio</th>
-                <th>Vehículos</th>
-                <th>Lav. generales</th>
-                <th>Sin lavado</th>
-                <th>Cumplimiento</th>
+                <th>Municipio</th><th>Vehículos</th><th>Lav. generales</th><th>Sin lavado</th><th>Cumplimiento</th>
               </tr>
             </thead>
-            <tbody id="diagBody">
-              <!-- Rendered via JS -->
-            </tbody>
+            <tbody id="diagBody"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- VISTA: Promedios -->
+      <!-- ─── VISTA: Promedios ───────────────────────────────── -->
       <div id="view-promedios" class="section">
         <div class="filter-bar">
-          <select id="promMun" onchange="renderPromedios()">
-            <option value="">Todos los municipios</option>
-          </select>
+          <select id="promMun" onchange="renderPromedios()"><option value="">Todos los municipios</option></select>
           <select id="promEst" onchange="renderPromedios()">
             <option value="">Todos los estados</option>
             <option value="critico">Crítico (0 lavados)</option>
             <option value="con">Con algún lavado</option>
           </select>
-          <input id="promSearch" type="text" placeholder="Buscar placa…" oninput="renderPromedios()" style="background: var(--s2); border: 1px solid var(--border2); border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 13px; padding: 7px 12px; outline: none; width: 160px;">
-          <button class="btn btn-danger" onclick="openModal('modalPDF')" style="padding:6px 12px;font-size:11px;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);color:var(--red)">
-            📄 Reporte PDF
-          </button>
+          <input id="promSearch" type="text" placeholder="Buscar placa…" oninput="renderPromedios()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
           <span class="tbl-count" id="promCount">0 vehículos</span>
         </div>
         <div class="table-wrap">
@@ -160,65 +181,52 @@
             <table class="hm-tbl">
               <thead>
                 <tr>
-                  <th class="left">Placa</th>
-                  <th class="left">Municipio</th>
-                  <th class="left">Lavados</th>
+                  <th class="left">Placa</th><th class="left">Municipio</th><th class="left">Lavados</th>
                   <th>Dom</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th>
                   <th>Mejor día</th>
                 </tr>
               </thead>
-              <tbody id="promBody">
-                <!-- Rendered via JS -->
-              </tbody>
+              <tbody id="promBody"></tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- VISTA: Programación -->
+      <!-- ─── VISTA: Programación ───────────────────────────── -->
       <div id="view-programacion" class="section">
-        <!-- Configurador Kanban -->
-        <div class="filter-bar" style="background:var(--s2); padding:16px; border-radius:12px; margin-bottom:16px; flex-wrap:wrap; gap:16px; display:flex; align-items:flex-end;">
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <label style="font-size:11px; color:var(--muted); font-weight:600;">Fecha de Inicio</label>
-            <input type="date" id="progStartDate" style="background:var(--bg); border:1px solid var(--border2); border-radius:8px; color:var(--text); padding:8px 12px; outline:none; font-family:var(--sans); font-size:13px;">
+        <div class="filter-bar" style="background:var(--surface);padding:18px;border-radius:var(--radius-lg);margin-bottom:20px;box-shadow:var(--shadow-xs);border:1px solid var(--border);flex-wrap:wrap;gap:16px;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Fecha de Inicio</label>
+            <input type="date" id="progStartDate" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <label style="font-size:11px; color:var(--muted); font-weight:600;">Fecha de Fin</label>
-            <input type="date" id="progEndDate" style="background:var(--bg); border:1px solid var(--border2); border-radius:8px; color:var(--text); padding:8px 12px; outline:none; font-family:var(--sans); font-size:13px;">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Fecha de Fin</label>
+            <input type="date" id="progEndDate" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
           </div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <label style="font-size:11px; color:var(--muted); font-weight:600;">Vehículos</label>
-            <select id="progVehiculosFiltro" style="background:var(--bg); border:1px solid var(--border2); border-radius:8px; color:var(--text); padding:8px 12px; outline:none; font-family:var(--sans); font-size:13px;">
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Vehículos</label>
+            <select id="progVehiculosFiltro" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
               <option value="todos">Todos los vehículos</option>
               <option value="sin_lavado">Solo sin lavados</option>
             </select>
           </div>
-          <button class="btn btn-primary" onclick="renderProgramacion()" style="padding:9px 16px;">
+          <button class="btn btn-primary" onclick="renderProgramacion()" style="padding:10px 20px;">
             Generar Propuesta
           </button>
-          <div style="flex-grow:1; display:flex; justify-content:flex-end;">
-             <button class="btn btn-danger" onclick="openModal('modalPDF')" style="padding:8px 12px;font-size:11px;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);color:var(--red)">
-              📄 Reporte PDF
-            </button>
-          </div>
         </div>
-
-        <!-- Tablero Kanban -->
-        <div class="kanban-board" id="progBody" style="display:flex; gap:16px; overflow-x:auto; padding-bottom:12px; min-height:500px; align-items:flex-start;">
-          <!-- Rendered via JS -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+          <button id="toggleUnassignedBtn" class="btn btn-ghost" onclick="toggleUnassigned()" style="padding:7px 14px;font-size:12px;display:none;">Ocultar Sin Asignar</button>
         </div>
+        <div class="kanban-board" id="progBody" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;padding-bottom:12px;min-height:300px;align-items:start;"></div>
       </div>
 
-      <!-- VISTA: Vehículos (Gestión) -->
+      <!-- ─── VISTA: Gestión de Vehículos ───────────────────── -->
       <div id="view-vehiculos" class="section">
         <div class="filter-bar">
-          <select id="vehMun" onchange="renderVehiculos()">
-            <option value="">Todos los municipios</option>
-          </select>
-          <input id="vehSearch" type="text" placeholder="Buscar placa…" oninput="renderVehiculos()" style="background: var(--s2); border: 1px solid var(--border2); border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 13px; padding: 7px 12px; outline: none; width: 160px;">
-          <button class="btn btn-danger" onclick="openModal('modalPDF')" style="padding:6px 12px;font-size:11px;background:var(--red-dim);border:1px solid rgba(248,81,73,.3);color:var(--red)">
-            📄 Reporte PDF
+          <select id="vehMun" onchange="renderVehiculos()"><option value="">Todos los municipios</option></select>
+          <input id="vehSearch" type="text" placeholder="Buscar placa…" oninput="renderVehiculos()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
+          <button class="btn btn-primary" onclick="openModal('modalVehicle')" style="padding:9px 18px;font-size:13px;gap:6px;">
+            ➕ Agregar vehículo
           </button>
           <span class="tbl-count" id="vehCount">0 vehículos</span>
         </div>
@@ -226,64 +234,153 @@
           <table class="tbl">
             <thead>
               <tr>
-                <th>Placa</th>
-                <th>Municipio</th>
-                <th>Tipo</th>
-                <th>Ruta</th>
-                <th>Supervisor</th>
-                <th>Último Lavado</th>
-                <th>Lav. Gral.</th>
-                <th style="text-align: right">Acciones</th>
+                <th>Placa</th><th>Municipio</th><th>Tipo</th><th>Ruta</th>
+                <th>Supervisor</th><th>Último Lavado</th><th>Lav. Gral.</th>
+                <th style="text-align:right">Acciones</th>
               </tr>
             </thead>
-            <tbody id="vehBody">
-              <!-- Rendered via JS -->
-            </tbody>
+            <tbody id="vehBody"></tbody>
           </table>
         </div>
       </div>
 
-      </div>
-
-      <!-- VISTA: Historial y Escáner -->
-      <div id="view-historial" class="section">
-        <div class="filter-bar" style="justify-content: space-between; background: var(--s2); padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-          <button class="btn btn-primary" onclick="startQRScanner()" style="font-size: 15px; padding: 10px 20px; display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 18px">📷</span> Escanear Código QR
+      <!-- ─── VISTA: Todos los Lavados (NUEVA) ──────────────── -->
+      <div id="view-lavados" class="section">
+        <div class="filter-bar">
+          <select id="lavTipo" onchange="renderTodosLavados()">
+            <option value="">Todos los tipos</option>
+            <option value="General">General</option>
+            <option value="Sencillo">Sencillo</option>
+            <option value="Enjuague">Enjuague</option>
+          </select>
+          <select id="lavPersonal" onchange="renderTodosLavados()"><option value="">Todos los lavadores</option></select>
+          <select id="lavMun2" onchange="renderTodosLavados()"><option value="">Todos los municipios</option></select>
+          <input id="lavSearch" type="text" placeholder="Buscar placa…" oninput="renderTodosLavados()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
+          <button class="btn btn-em" onclick="openModal('modalLavado')" style="padding:9px 18px;font-size:13px;gap:6px;">
+            ✅ Registrar lavado
           </button>
-          <span class="tbl-count" id="histCount" style="margin-left: auto;">0 registros</span>
+          <span class="tbl-count" id="lavCount">0 registros</span>
         </div>
-        
-        <div id="qr-reader-container" style="display:none; max-width: 500px; margin: 0 auto 20px; background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-          <div style="padding: 14px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 600; font-size: 14px;">Escáner de Lavados</span>
-            <button class="btn btn-ghost" onclick="stopQRScanner()" style="padding: 4px 8px; font-size: 12px; color: var(--red)">Cerrar Cámara</button>
-          </div>
-          <div id="qr-reader" style="width:100%"></div>
-        </div>
-
         <div class="table-wrap">
           <table class="tbl">
             <thead>
               <tr>
-                <th>Placa</th>
-                <th>Fecha de Lavado</th>
-                <th>Hora</th>
-                <th>Origen del Registro</th>
+                <th>Placa</th><th>Municipio</th><th>Tipo de Lavado</th>
+                <th>Especialista</th><th>Fecha</th><th>Horario</th><th>Origen</th>
               </tr>
             </thead>
-            <tbody id="histBody">
-              <!-- Rendered via JS -->
-            </tbody>
+            <tbody id="lavBody"></tbody>
           </table>
         </div>
       </div>
 
-    </div>
+      <!-- ─── VISTA: Historial / Escáner ────────────────────── -->
+      <div id="view-historial" class="section">
+        <div class="filter-bar" style="background:var(--surface);padding:16px 18px;border-radius:var(--radius-lg);margin-bottom:16px;box-shadow:var(--shadow-xs);border:1px solid var(--border);">
+          <button class="btn btn-primary" onclick="startQRScanner()" style="padding:10px 20px;gap:8px;">
+            <span style="font-size:16px">📷</span> Escanear Código QR
+          </button>
+          <button class="btn btn-em" onclick="openModal('modalLavado')" style="padding:10px 18px;font-size:13px;gap:6px;">
+            ✅ Registrar lavado
+          </button>
+          <span class="tbl-count" id="histCount" style="margin-left:auto;">0 registros</span>
+        </div>
+        <div id="qr-reader-container" style="display:none;max-width:500px;margin:0 auto 20px;background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border);">
+          <div style="padding:14px;background:var(--s2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:14px;">Escáner de Lavados</span>
+            <button class="btn btn-ghost" onclick="stopQRScanner()" style="padding:5px 10px;font-size:12px;color:var(--red)">Cerrar Cámara</button>
+          </div>
+          <div id="qr-reader" style="width:100%"></div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Placa</th><th>Tipo</th><th>Lavador</th>
+                <th>Fecha</th><th>Horas (Inicio — Fin)</th><th>Origen</th>
+              </tr>
+            </thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── VISTA: Centro de Reportes ─────────────────────── -->
+      <div id="view-reportes" class="section">
+        <div class="sec-hdr" style="margin-bottom:28px;">
+          <div class="sec-title" style="font-size:22px;font-weight:800;letter-spacing:-0.02em;text-transform:none;">Centro de Reportes</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px;display:none">Genera y descarga documentos PDF.</div>
+        </div>
+        <p style="color:var(--muted);font-size:13px;margin-top:-16px;margin-bottom:24px;">Genera y descarga documentos PDF para presentar a la gerencia.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;max-width:900px;">
+
+          <div class="report-card">
+            <div class="rc-icon" style="background:rgba(37,99,235,0.1);color:var(--accent);">📊</div>
+            <div class="rc-title">Diagnóstico General</div>
+            <div class="rc-desc">KPIs de cumplimiento, resumen por municipio y vehículos sin lavado.</div>
+            <div class="rc-field"><input type="text" id="pdfRespDiag" placeholder="Nombre del responsable" class="rc-input"></div>
+            <button class="rc-btn" onclick="descargarPDF('diagnostico', this)">Descargar PDF</button>
+          </div>
+
+          <div class="report-card">
+            <div class="rc-icon" style="background:rgba(5,150,105,0.1);color:var(--green);">📅</div>
+            <div class="rc-title">Propuesta de Programación</div>
+            <div class="rc-desc">Cronograma de lavados del rango generado en la pestaña de programación.</div>
+            <div class="rc-field" style="display:flex;gap:8px;">
+              <div id="pdfRango" style="flex:2;font-size:12px;padding:9px 12px;border-radius:8px;background:var(--s2);color:var(--muted);display:flex;align-items:center;">(Rango del tablero)</div>
+              <select id="pdfMaxDia" class="rc-input" style="flex:1;cursor:pointer;">
+                <option value="3">3/día</option><option value="4" selected>4/día</option>
+                <option value="5">5/día</option><option value="6">6/día</option>
+              </select>
+            </div>
+            <div class="rc-field"><input type="text" id="pdfRespProg" placeholder="Nombre del responsable" class="rc-input"></div>
+            <button class="rc-btn" onclick="descargarPDF('programacion', this)">Descargar PDF</button>
+          </div>
+
+          <div class="report-card">
+            <div class="rc-icon" style="background:rgba(217,119,6,0.1);color:var(--gold);">🧑‍🔧</div>
+            <div class="rc-title">Reporte de Lavadores</div>
+            <div class="rc-desc">Detalle de lavados realizados por cada especialista: fechas, horas y tipos.</div>
+            <div class="rc-field"><input type="text" id="pdfRespLav" placeholder="Nombre del responsable" class="rc-input"></div>
+            <button class="rc-btn" onclick="descargarPDF('lavadores', this)">Descargar PDF</button>
+          </div>
+
+          <div class="report-card">
+            <div class="rc-icon" style="background:rgba(220,38,38,0.1);color:var(--red);">🚛</div>
+            <div class="rc-title">Inventario de Flota</div>
+            <div class="rc-desc">Listado completo de todos los vehículos con su estado y lavados registrados.</div>
+            <div class="rc-field"><input type="text" id="pdfRespFlota" placeholder="Nombre del responsable" class="rc-input"></div>
+            <button class="rc-btn" onclick="descargarPDF('flota', this)">Descargar PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── VISTA: Personal y Rendimiento ─────────────────── -->
+      <div id="view-personal" class="section"></div>
+
+    </div><!-- /content -->
   </main>
 </div>
 
-<!-- MODALS -->
+<!-- ═══ QR Alert Notification ═══════════════════════════════════ -->
+<div id="qrAlert" class="qr-alert">
+  <div class="qa-bell">🔔</div>
+  <div class="qa-body">
+    <div class="qa-title">¡Lavado registrado via QR!</div>
+    <div class="qa-detail">
+      Vehículo: <span class="qa-placa" id="qaPlaca">—</span><br>
+      Lavador: <span id="qaLavador">—</span> · <span id="qaTipo">—</span>
+    </div>
+    <div class="qa-actions">
+      <button class="qa-btn qa-btn-primary" onclick="showView('historial'); closeQrAlert()">Ver historial</button>
+      <button class="qa-btn qa-btn-ghost" onclick="closeQrAlert()">Cerrar</button>
+    </div>
+  </div>
+  <button class="qa-close" onclick="closeQrAlert()">×</button>
+</div>
+
+<!-- ═══ MODALS ═══════════════════════════════════════════════════ -->
+
 <!-- Modal Add/Edit Vehicle -->
 <div class="modal-bg" id="modalVehicle">
   <div class="modal">
@@ -298,10 +395,7 @@
         <div class="field"><label>Tipo de Vehículo</label><input type="text" id="mvTipo" required></div>
         <div class="field"><label>Ruta</label><input type="text" id="mvRuta" required></div>
       </div>
-      <div class="field">
-        <label>Supervisor</label>
-        <input type="text" id="mvSup" required>
-      </div>
+      <div class="field"><label>Supervisor</label><input type="text" id="mvSup" required></div>
       <div class="btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalVehicle')">Cancelar</button>
         <button type="submit" class="btn btn-primary">Guardar vehículo</button>
@@ -313,22 +407,37 @@
 <!-- Modal Registrar Lavado -->
 <div class="modal-bg" id="modalLavado">
   <div class="modal">
-    <div class="modal-title">Registrar lavado general</div>
+    <div class="modal-title">Registrar lavado</div>
     <div class="modal-sub">Registra un lavado realizado para actualizar los indicadores.</div>
     <form id="formLavado" onsubmit="saveLavado(event)">
-      <div class="field">
-        <label>Placa del vehículo</label>
-        <input type="text" id="mlPlaca" required placeholder="Ej: ESO980">
-      </div>
+      <div class="field"><label>Placa del vehículo</label><input type="text" id="mlPlaca" required placeholder="Ej: ESO980"></div>
       <div class="field-row">
         <div class="field">
-          <label>Fecha del lavado</label>
-          <input type="date" id="mlFecha" required>
+          <label>Tipo de lavado</label>
+          <select id="mlTipoLavado" required style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+            <option value="" disabled selected>Selecciona...</option>
+            <option value="General">Lavado General</option>
+            <option value="Sencillo">Lavado Sencillo</option>
+            <option value="Enjuague">Solo Enjuague</option>
+          </select>
         </div>
         <div class="field">
-          <label>Hora de llegada al lavadero</label>
-          <input type="time" id="mlHora" required>
+          <label>Lavador</label>
+          <select id="mlLavador" required style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+            <option value="" disabled selected>Selecciona...</option>
+            <option value="ELIFELE SIMANCA">ELIFELE SIMANCA</option>
+            <option value="HADER CORREA">HADER CORREA</option>
+            <option value="LUIS GOMEZ">LUIS GOMEZ</option>
+            <option value="JAIDER MORENO">JAIDER MORENO</option>
+            <option value="MOISES GOMEZ">MOISES GOMEZ</option>
+            <option value="JORGE ARROYO">JORGE ARROYO</option>
+          </select>
         </div>
+      </div>
+      <div class="field"><label>Fecha del lavado</label><input type="date" id="mlFecha" required></div>
+      <div class="field-row">
+        <div class="field"><label>Hora Inicio</label><input type="time" id="mlHoraInicio" required></div>
+        <div class="field"><label>Hora Fin</label><input type="time" id="mlHoraFin" required></div>
       </div>
       <div class="btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalLavado')">Cancelar</button>
@@ -342,17 +451,14 @@
 <div class="modal-bg" id="modalImport">
   <div class="modal">
     <div class="modal-title">Importar base de datos</div>
-    <div class="modal-sub">Sube un archivo CSV con el formato requerido para actualizar toda la flota de Urabá.</div>
+    <div class="modal-sub">Sube un archivo CSV con el formato requerido para actualizar toda la flota.</div>
     <div class="csv-box">
       <strong>Formato esperado:</strong> Separado por comas o punto y coma.<br>
       Columnas necesarias:<br>
-      <code>placa</code> <code>municipio</code> <code>tipo</code> <code>ruta</code> <code>supervisor</code> <code>lavados_generales</code> <code>ultimo_lavado</code> <code>hora_dom</code> ... <code>hora_sab</code>
+      <code>placa</code> <code>municipio</code> <code>tipo</code> <code>ruta</code> <code>supervisor</code> <code>lavados_generales</code> <code>ultimo_lavado</code> <code>hora_dom</code> … <code>hora_sab</code>
     </div>
     <form id="formImport" onsubmit="importCSV(event)">
-      <div class="field">
-        <label>Archivo CSV</label>
-        <input type="file" id="miFile" accept=".csv" required>
-      </div>
+      <div class="field"><label>Archivo CSV</label><input type="file" id="miFile" accept=".csv" required></div>
       <div class="btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalImport')">Cancelar</button>
         <button type="submit" class="btn btn-primary" id="miBtn">Procesar e Importar</button>
@@ -363,7 +469,7 @@
 
 <!-- Modal Confirm -->
 <div class="modal-bg" id="modalConfirm">
-  <div class="modal" style="max-width: 400px">
+  <div class="modal" style="max-width:400px">
     <div class="modal-title">Confirmar acción</div>
     <div class="modal-sub" id="mcMsg">¿Estás seguro?</div>
     <div class="btn-row">
@@ -377,80 +483,61 @@
 <div class="modal-bg" id="modalQR">
   <div class="modal" style="max-width:380px;text-align:center">
     <div class="modal-title" id="qrTitleText">Código QR</div>
-    <div class="modal-sub">Comparte este enlace con el supervisor para registrar lavados desde su celular, sin necesidad de ingresar al panel.</div>
+    <div class="modal-sub">Comparte este enlace para registrar lavados desde el celular, sin necesidad de ingresar al panel.</div>
     <div class="qr-wrap" id="qrCanvas"></div>
     <div class="qr-url" id="qrUrlText"></div>
-    <div class="btn-row" style="flex-wrap:wrap;gap:8px">
+    <div class="btn-row" style="flex-wrap:wrap;gap:8px;justify-content:center;">
       <button class="btn btn-ghost" onclick="closeModal('modalQR')">Cerrar</button>
-      <button class="btn btn-primary" onclick="printCurrentQR()" style="background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.3);color:var(--blue)">Imprimir</button>
+      <button class="btn btn-ghost" onclick="printCurrentQR()">Imprimir</button>
       <button class="btn btn-primary" onclick="downloadCurrentQR()">Descargar PNG</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Exportar PDF -->
-<div class="modal-bg" id="modalPDF">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-title">📄 Exportar Reporte PDF</div>
-    <div class="modal-sub">Genera un informe ejecutivo con la programación actual configurada en el tablero.</div>
+<!-- Toast -->
+<div id="toast" class="toast"><span id="toastMsg"></span></div>
 
-    <div class="field">
-      <label>Rango a exportar</label>
-      <div id="pdfRango" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;width:100%;font-weight:600;margin-bottom:8px">
-        (Configura las fechas en el tablero de programación)
-      </div>
-    </div>
-    
-    <div class="field">
-      <label>Máx. vehículos por día (Referencia)</label>
-      <select id="pdfMaxDia" style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;width:100%;outline:none">
-        <option value="3">3</option>
-        <option value="4" selected>4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-      </select>
-    </div>
-
-    <div class="field">
-      <label>Nombre del responsable (opcional)</label>
-      <input type="text" id="pdfResponsable" placeholder="Ej: Juan García — Jefe de Flota"
-             style="background:var(--s2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 12px;width:100%;outline:none">
-    </div>
-
-    <div style="background:var(--s2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--muted);line-height:1.6">
-      📋 <strong style="color:var(--text)">El PDF incluye:</strong> KPIs de cumplimiento · Gráfico por municipio · Tablero Kanban convertido a reporte formal de cronograma.
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-ghost" onclick="closeModal('modalPDF')">Cancelar</button>
-      <button class="btn btn-danger" id="pdfBtn" onclick="descargarPDF()"
-              style="background:linear-gradient(135deg,#b91c1c,#f85149);border:none">
-        ⬇ Descargar PDF
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast" class="toast">
-  <span id="toastMsg"></span>
-</div>
-
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}?v=12"></script>
 <script>
-  function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('open');
-    document.querySelector('.sidebar-overlay').classList.toggle('open');
+  // ── Sidebar: mobile open/close ─────────────────────────────────
+  function openSidebarMobile() {
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.querySelector('.sidebar-overlay').classList.add('open');
   }
-  // Cerrar sidebar al seleccionar un item en la vista móvil
+  function closeSidebarMobile() {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.querySelector('.sidebar-overlay').classList.remove('open');
+  }
+  // Keep legacy name for any internal calls
+  function toggleSidebar() { openSidebarMobile(); }
+
+  // Close sidebar on mobile when nav item clicked
   document.querySelectorAll('.sidebar .nav-item').forEach(item => {
     item.addEventListener('click', () => {
-      if(window.innerWidth <= 860) {
-        document.querySelector('.sidebar').classList.remove('open');
-        document.querySelector('.sidebar-overlay').classList.remove('open');
-      }
+      if (window.innerWidth <= 860) closeSidebarMobile();
     });
   });
+
+  // ── Sidebar: desktop collapse ──────────────────────────────────
+  function toggleSidebarCollapse() {
+    const sb = document.getElementById('sidebar');
+    const main = document.getElementById('main');
+    sb.classList.toggle('collapsed');
+    main.classList.toggle('collapsed');
+    localStorage.setItem('sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+  }
+
+  // Restore sidebar state on load
+  if (localStorage.getItem('sb_collapsed') === '1') {
+    document.getElementById('sidebar').classList.add('collapsed');
+    document.getElementById('main').classList.add('collapsed');
+  }
+
+  // ── Sidebar: accordions ────────────────────────────────────────
+  function toggleNavGroup(btn) {
+    const group = btn.parentElement;
+    group.classList.toggle('active');
+  }
 </script>
 </body>
 </html>

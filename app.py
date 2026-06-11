@@ -45,6 +45,36 @@ def _recalcular_stats(db_data: dict) -> dict:
     })
     return db_data
 
+def calc_minutos(h_inicio, h_fin):
+    if not h_inicio or not h_fin: return 0
+    try:
+        hi_h, hi_m = map(int, h_inicio.split(':'))
+        hf_h, hf_m = map(int, h_fin.split(':'))
+        mi = hi_h * 60 + hi_m
+        mf = hf_h * 60 + hf_m
+        if mf < mi: mf += 24 * 60
+        return mf - mi
+    except Exception:
+        return 0
+
+def update_lavadores_stats(db_data, lavador, tipo_lavado, minutos):
+    if not lavador: return
+    lavador = lavador.strip().upper()
+    stats = db_data.setdefault('lavadores_stats', {})
+    l_stat = stats.setdefault(lavador, {
+        'total_lavados': 0, 
+        'tiempo_total_minutos': 0, 
+        'tipos': {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
+    })
+    
+    l_stat['total_lavados'] += 1
+    if tipo_lavado in l_stat['tipos']:
+        l_stat['tipos'][tipo_lavado] += 1
+    else:
+        l_stat['tipos'][tipo_lavado] = 1
+        
+    l_stat['tiempo_total_minutos'] += minutos
+
 # ─── Rutas principales ────────────────────────────────────────────────────────
 @app.route('/')
 def index():
@@ -229,7 +259,10 @@ def add_lavado_manual():
     data  = request.json or {}
     placa = data.get('placa')
     fecha = data.get('fecha')
-    hora  = data.get('hora')
+    hora_inicio = data.get('hora_inicio', '')
+    hora_fin    = data.get('hora_fin', '')
+    tipo_lavado = data.get('tipo_lavado', 'General')
+    lavador     = data.get('lavador', '')
 
     db_data = database.get_data(LATEST_DATA_KEY)
     if not db_data:
@@ -239,30 +272,38 @@ def add_lavado_manual():
     if not vehiculo:
         return jsonify({'error': f'Vehículo {placa} no encontrado.'}), 404
 
-    vehiculo['lavGen'] = vehiculo.get('lavGen', 0) + 1
-
-    # Actualizar fecha último lavado
-    if fecha:
-        parts = fecha.split('-')
-        vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
+    if tipo_lavado == 'General':
+        vehiculo['lavGen'] = vehiculo.get('lavGen', 0) + 1
+        # Actualizar fecha último lavado
+        if fecha:
+            parts = fecha.split('-')
+            vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
         
     # Registrar en historial
     historial = db_data.setdefault('historial_lavados', [])
     historial.insert(0, {
         'placa': placa,
         'fecha': fecha,
-        'hora': hora or datetime.now().strftime('%H:%M'),
+        'hora': hora_inicio or datetime.now().strftime('%H:%M'),
+        'hora_inicio': hora_inicio,
+        'hora_fin': hora_fin,
+        'lavador': lavador,
+        'tipo_lavado': tipo_lavado,
         'origen': 'dashboard_manual'
     })
     db_data['historial_lavados'] = historial[:200]
+    
+    # Actualizar estadisticas de lavadores
+    minutos = calc_minutos(hora_inicio, hora_fin)
+    update_lavadores_stats(db_data, lavador, tipo_lavado, minutos)
 
     # Actualizar horaDow con promedio móvil (actualiza el heatmap en tiempo real)
-    if hora and fecha:
+    if hora_inicio and fecha and tipo_lavado == 'General':
         try:
             import datetime as dt
             d_obj = dt.datetime.strptime(fecha, "%Y-%m-%d")
             dow   = d_obj.isoweekday() % 7   # 0=Domingo
-            hh, mm = map(int, hora.split(':'))
+            hh, mm = map(int, hora_inicio.split(':'))
             mins  = hh * 60 + mm
 
             hora_dow = vehiculo.setdefault('horaDow', {})
@@ -274,7 +315,7 @@ def add_lavado_manual():
                 new_s = f"{new_m // 60:02d}:{new_m % 60:02d}"
                 hora_dow[dow_str] = {'s': new_s, 'm': new_m, 'n': new_n, 'std': existing.get('std', 0)}
             else:
-                hora_dow[dow_str] = {'s': hora, 'm': mins, 'n': 1, 'std': 0}
+                hora_dow[dow_str] = {'s': hora_inicio, 'm': mins, 'n': 1, 'std': 0}
         except Exception:
             pass
 
@@ -366,6 +407,7 @@ def exportar_pdf():
     placas = data.get('placas', [])
     max_dia = int(data.get('max_dia', 4))
     responsable = data.get('responsable', '').strip()
+    tipo_reporte = data.get('tipo_reporte', 'completo')
 
     if not start_date or not end_date:
         return jsonify({'error': 'Faltan fechas de inicio o fin.'}), 400
@@ -382,12 +424,12 @@ def exportar_pdf():
     prog = generar_programacion(vehiculos_a_programar, start_date, end_date, max_dia, prog_manual)
 
     # Generar PDF
-    pdf_bytes = generar_pdf(db_data, prog, start_date, end_date, responsable)
+    pdf_bytes = generar_pdf(db_data, prog, start_date, end_date, responsable, tipo_reporte)
 
     buf = BytesIO(pdf_bytes)
     buf.seek(0)
 
-    nombre_archivo = f'Reporte_Lavados_{start_date}_al_{end_date}.pdf'
+    nombre_archivo = f"Reporte_{tipo_reporte.capitalize()}_{start_date}.pdf" if tipo_reporte == 'diagnostico' else f"Reporte_Programacion_{start_date}_al_{end_date}.pdf"
     return send_file(
         buf,
         mimetype='application/pdf',
@@ -419,72 +461,94 @@ def registro_qr(placa):
 
     if request.method == 'POST':
         fecha = request.form.get('fecha', '').strip()
-        hora  = request.form.get('hora', '').strip()
+        hora_inicio  = request.form.get('hora_inicio', '').strip()
+        hora_fin = request.form.get('hora_fin', '').strip()
+        lavador = request.form.get('lavador', '').strip()
+        tipo_lavado = request.form.get('tipo_lavado', '').strip()
 
-        if not fecha or not hora:
+        if not fecha or not hora_inicio or not hora_fin or not lavador or not tipo_lavado:
             return render_template('registro.html', vehiculo=vehiculo,
-                                   error='Debes ingresar la fecha y la hora del lavado.')
+                                   error='Faltan datos obligatorios en el formulario.')
 
         # Incrementar lavados generales
-        vehiculo['lavGen'] = vehiculo.get('lavGen', 0) + 1
-
-        # Actualizar último lavado
-        parts = fecha.split('-')
-        vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
+        if tipo_lavado == 'General':
+            vehiculo['lavGen'] = vehiculo.get('lavGen', 0) + 1
+            # Actualizar último lavado solo si es General
+            parts = fecha.split('-')
+            vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
         
         # Registrar en historial
         historial = db_data.setdefault('historial_lavados', [])
         historial.insert(0, {
             'placa': placa,
             'fecha': fecha,
-            'hora': hora,
+            'hora': hora_inicio,
+            'hora_inicio': hora_inicio,
+            'hora_fin': hora_fin,
+            'lavador': lavador,
+            'tipo_lavado': tipo_lavado,
             'origen': 'qr_registro'
         })
         db_data['historial_lavados'] = historial[:200]
+        
+        # Actualizar estadisticas de lavadores
+        minutos = calc_minutos(hora_inicio, hora_fin)
+        update_lavadores_stats(db_data, lavador, tipo_lavado, minutos)
 
-        # Actualizar promedio horaDow con promedio móvil
-        try:
-            d_obj = dt.datetime.strptime(fecha, '%Y-%m-%d')
-            dow   = d_obj.isoweekday() % 7   # 0=Domingo
-            hh, mm = map(int, hora.split(':'))
-            mins  = hh * 60 + mm
+        # Actualizar promedio horaDow con promedio móvil (solo para lavado General)
+        if tipo_lavado == 'General':
+            try:
+                d_obj = dt.datetime.strptime(fecha, '%Y-%m-%d')
+                dow   = d_obj.isoweekday() % 7   # 0=Domingo
+                hh, mm = map(int, hora_inicio.split(':'))
+                mins  = hh * 60 + mm
 
-            hora_dow = vehiculo.setdefault('horaDow', {})
-            dow_str  = str(dow)
-            existing = hora_dow.get(dow_str)
-            if existing:
-                new_n = existing['n'] + 1
-                new_m = round((existing['m'] * existing['n'] + mins) / new_n)
-                new_s = f"{new_m // 60:02d}:{new_m % 60:02d}"
-                hora_dow[dow_str] = {'s': new_s, 'm': new_m, 'n': new_n, 'std': existing.get('std', 0)}
-            else:
-                hora_dow[dow_str] = {'s': hora, 'm': mins, 'n': 1, 'std': 0}
-        except Exception:
-            pass
+                hora_dow = vehiculo.setdefault('horaDow', {})
+                dow_str  = str(dow)
+                existing = hora_dow.get(dow_str)
+                if existing:
+                    new_n = existing['n'] + 1
+                    new_m = round((existing['m'] * existing['n'] + mins) / new_n)
+                    new_s = f"{new_m // 60:02d}:{new_m % 60:02d}"
+                    hora_dow[dow_str] = {'s': new_s, 'm': new_m, 'n': new_n, 'std': existing.get('std', 0)}
+                else:
+                    hora_dow[dow_str] = {'s': hora_inicio, 'm': mins, 'n': 1, 'std': 0}
+            except Exception:
+                pass
+
+        # Guardar evento QR para notificaciones en tiempo real
+        import time as _time
+        db_data['last_qr_event'] = {
+            'placa':      placa,
+            'lavador':    lavador,
+            'tipo_lavado': tipo_lavado,
+            'timestamp':  _time.time()
+        }
 
         db_data = _recalcular_stats(db_data)
         database.save_data(LATEST_DATA_KEY, db_data)
 
-        # Calcular fin estimado para la p\u00e1gina de \u00e9xito
-        try:
-            hh2, mm2 = map(int, hora.split(':'))
-            fin_m = hh2 * 60 + mm2 + 180
-            fin_est = f"{fin_m // 60:02d}:{fin_m % 60:02d}"
-        except Exception:
-            fin_est = 'N/D'
-
-        # Formatear fecha para mostrar
+        # Calcular fin estimado y formatear fecha para mostrar
         try:
             fecha_fmt = dt.datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
         except Exception:
             fecha_fmt = fecha
 
         return render_template('registro_ok.html',
-                               placa=placa, fecha_fmt=fecha_fmt, hora=hora, fin_est=fin_est)
+                               placa=placa, fecha_fmt=fecha_fmt, hora_inicio=hora_inicio, 
+                               hora_fin=hora_fin, lavador=lavador, tipo_lavado=tipo_lavado)
 
     return render_template('registro.html', vehiculo=vehiculo, error=None)
 
-# ─── Arranque ─────────────────────────────────────────────────────────────────
+# ─── Último evento QR (para polling de notificaciones) ───────────────────────────────────
+@app.route('/api/last-qr-event')
+def api_last_qr_event():
+    db_data = database.get_data(LATEST_DATA_KEY)
+    if not db_data:
+        return jsonify({'event': None})
+    return jsonify({'event': db_data.get('last_qr_event')})
+
+# ─── Arranque ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     threading.Timer(1.0, lambda: webbrowser.open('http://127.0.0.1:5001')).start()
     print('\n  * Dashboard corriendo en: http://127.0.0.1:5001\n')

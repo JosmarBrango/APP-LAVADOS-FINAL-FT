@@ -139,7 +139,7 @@
     <div class="placa-badge">{{ placa }}</div>
     <div class="ok-title">¡Lavado registrado!</div>
     <div class="ok-sub">
-      El lavado general ha sido confirmado exitosamente en el sistema.
+      El lavado <strong>{{ tipo_lavado }}</strong> ha sido confirmado exitosamente en el sistema.
     </div>
 
     <div class="details">
@@ -148,16 +148,24 @@
         <span class="det-val" style="font-family:monospace;letter-spacing:.08em;color:var(--blue)">{{ placa }}</span>
       </div>
       <div class="det-row">
+        <span class="det-lbl">Tipo</span>
+        <span class="det-val">{{ tipo_lavado }}</span>
+      </div>
+      <div class="det-row">
+        <span class="det-lbl">Lavador</span>
+        <span class="det-val">{{ lavador }}</span>
+      </div>
+      <div class="det-row">
         <span class="det-lbl">Fecha</span>
         <span class="det-val">{{ fecha_fmt }}</span>
       </div>
       <div class="det-row">
-        <span class="det-lbl">Hora de llegada</span>
-        <span class="det-val">{{ hora }}</span>
+        <span class="det-lbl">Hora Inicio</span>
+        <span class="det-val">{{ hora_inicio }}</span>
       </div>
       <div class="det-row">
-        <span class="det-lbl">Fin estimado (3h)</span>
-        <span class="det-val" style="color:var(--muted)">{{ fin_est }}</span>
+        <span class="det-lbl">Hora Fin</span>
+        <span class="det-val">{{ hora_fin }}</span>
       </div>
     </div>
 

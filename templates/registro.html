@@ -129,7 +129,7 @@
       margin-bottom: 6px;
       font-weight: 500;
     }
-    .field input {
+    .field input, .field select {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -143,7 +143,13 @@
       appearance: none;
       transition: border-color .2s;
     }
-    .field input:focus { border-color: var(--blue); }
+    .field select {
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px top 50%;
+      background-size: 12px auto;
+    }
+    .field input:focus, .field select:focus { border-color: var(--blue); }
     /* ── Confirm button ── */
     .btn-confirm {
       width: 100%;
@@ -250,20 +256,47 @@
 
     <div class="divider"></div>
 
-    <div class="section-title">📋 Registrar lavado general</div>
+    <div class="section-title">📋 Registrar lavado en sistema</div>
 
     <form method="POST" id="formReg" autocomplete="off">
+      <div class="field">
+        <label>Tipo de lavado</label>
+        <select name="tipo_lavado" required>
+          <option value="" disabled selected>Selecciona una opción...</option>
+          <option value="General">Lavado General</option>
+          <option value="Sencillo">Lavado Sencillo</option>
+          <option value="Enjuague">Solo Enjuague</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Lavador</label>
+        <select name="lavador" required>
+          <option value="" disabled selected>Selecciona una persona...</option>
+          <option value="ELIFELE SIMANCA">ELIFELE SIMANCA</option>
+          <option value="HADER CORREA">HADER CORREA</option>
+          <option value="LUIS GOMEZ">LUIS GOMEZ</option>
+          <option value="JAIDER MORENO">JAIDER MORENO</option>
+          <option value="MOISES GOMEZ">MOISES GOMEZ</option>
+          <option value="JORGE ARROYO">JORGE ARROYO</option>
+        </select>
+      </div>
       <div class="field">
         <label>Fecha del lavado</label>
         <input type="date" name="fecha" id="inFecha" required>
       </div>
-      <div class="field">
-        <label>Hora de llegada al lavadero</label>
-        <input type="time" name="hora" id="inHora" required>
+      <div class="field" style="display:flex;gap:12px;">
+        <div style="flex:1;">
+          <label>Hora Inicio</label>
+          <input type="time" name="hora_inicio" id="inHora" required>
+        </div>
+        <div style="flex:1;">
+          <label>Hora Fin</label>
+          <input type="time" name="hora_fin" id="inHoraFin" required>
+        </div>
       </div>
       <button type="submit" class="btn-confirm" id="btnConfirm">
         <span style="font-size:20px">✓</span>
-        Confirmar Lavado General
+        Confirmar Lavado
       </button>
     </form>
   </div>
@@ -280,8 +313,10 @@
       const time  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
       const fechaEl = document.getElementById('inFecha');
       const horaEl  = document.getElementById('inHora');
+      const horaFinEl  = document.getElementById('inHoraFin');
       if (fechaEl && !fechaEl.value) fechaEl.value = today;
       if (horaEl && !horaEl.value)  horaEl.value  = time;
+      if (horaFinEl && !horaFinEl.value) horaFinEl.value = time;
 
       document.getElementById('formReg')?.addEventListener('submit', function() {
         const btn = document.getElementById('btnConfirm');
