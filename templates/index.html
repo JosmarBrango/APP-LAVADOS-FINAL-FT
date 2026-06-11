@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flota Urabá — Panel de Lavados</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=13">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=18">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -410,6 +410,7 @@
         
         <div class="config-tabs" style="display:flex;gap:12px;margin-bottom:24px;border-bottom:1px solid var(--border);">
           <button class="config-tab active" onclick="switchConfigTab('cuentas', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;font-family:var(--sans);">👥 Cuentas de Acceso</button>
+          <button class="config-tab" onclick="switchConfigTab('nomina', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">💸 Nómina y Tarifas</button>
           <button class="config-tab" onclick="switchConfigTab('general', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">⚙️ General</button>
           <button class="config-tab" onclick="switchConfigTab('avanzado', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">🛠️ Avanzado</button>
         </div>
@@ -427,8 +428,33 @@
           </div>
         </div>
         
+        <div id="tab-nomina" class="config-panel" style="display:none;">
+          <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm); margin-bottom: 24px;">
+            <div style="font-weight:600;margin-bottom:12px;font-size:16px;">Tarifas de Pago a Lavadores</div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Configura el valor a pagar a cada lavador por cada tipo de lavado. Este valor se usará para calcular la nómina estimada automáticamente.</p>
+            <form id="formTarifas" onsubmit="saveTarifas(event)">
+              <div class="field-row">
+                <div class="field">
+                  <label>PAGO POR LAVADO GENERAL</label>
+                  <div class="input-money"><input type="text" class="money-input" id="tarifaGeneral" placeholder="$ 0" required></div>
+                </div>
+                <div class="field">
+                  <label>PAGO POR LAVADO SENCILLO</label>
+                  <div class="input-money"><input type="text" class="money-input" id="tarifaSencillo" placeholder="$ 0" required></div>
+                </div>
+                <div class="field">
+                  <label>PAGO POR SOLO ENJUAGUE</label>
+                  <div class="input-money"><input type="text" class="money-input" id="tarifaEnjuague" placeholder="$ 0" required></div>
+                </div>
+              </div>
+              <div class="btn-row" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary">Guardar Tarifas</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
         <div id="tab-general" class="config-panel" style="display:none;">
-          <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm);">
             <div style="font-weight:600;margin-bottom:12px;">Preferencias Globales</div>
             <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Próximamente: configuración de horas laborales, metas de KPIs, y notificaciones de WhatsApp integradas.</p>
           </div>
@@ -614,7 +640,7 @@
   </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}?v=18"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}?v=21"></script>
 <script>
   // ── Sidebar: mobile open/close ─────────────────────────────────
   function openSidebarMobile() {

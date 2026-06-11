@@ -103,7 +103,7 @@ def generar_pdf(db_data: dict, programacion: list, start_date: str, end_date: st
     elif tipo_reporte == 'programacion':
         return _reporte_programacion(programacion, vehiculos, start_date, end_date, responsable)
     elif tipo_reporte == 'lavadores':
-        return _reporte_lavadores(historial, vehiculos, responsable)
+        return _reporte_lavadores(historial, vehiculos, responsable, db_data.get('lavadores_stats', {}))
     elif tipo_reporte == 'flota':
         return _reporte_flota(vehiculos, stats, responsable)
     else:
@@ -242,7 +242,8 @@ def _reporte_programacion(programacion, vehiculos, start_date, end_date, respons
 # ─────────────────────────────────────────────────────────────────────────────
 # REPORTE 3: LAVADORES
 # ─────────────────────────────────────────────────────────────────────────────
-def _reporte_lavadores(historial, vehiculos, responsable):
+def _reporte_lavadores(historial, vehiculos, responsable, lavadores_stats=None):
+    if lavadores_stats is None: lavadores_stats = {}
     placa_to_mun = {v['placa']: v.get('mun', 'N/D') for v in vehiculos}
 
     pdf = CleanReport(
@@ -289,6 +290,34 @@ def _reporte_lavadores(historial, vehiculos, responsable):
                 _t(origen_map.get(h.get('origen', ''), h.get('origen', '-')))
             ], cols, bg=bg, first_color=C_ACCENT)
         pdf.ln(6)
+
+    # Agregar resumen de nómina si hay datos
+    if lavadores_stats:
+        pdf.add_page()
+        _section(pdf, 'Resumen Estimado de Nómina')
+        cols_nomina = [60, 40, 40, 40, 60]
+        hdrs_nomina = ['Lavador', 'Generales', 'Sencillos', 'Enjuagues', 'Total Estimado']
+        _table_header(pdf, hdrs_nomina, cols_nomina)
+        
+        total_empresa = 0
+        for idx, (lavador, data) in enumerate(sorted(lavadores_stats.items())):
+            tipos = data.get('tipos', {})
+            pago = data.get('pago_estimado', 0)
+            total_empresa += pago
+            
+            bg = C_LIGHT if idx % 2 else C_WHITE
+            _table_row(pdf, [
+                _t(lavador),
+                str(tipos.get('General', 0)),
+                str(tipos.get('Sencillo', 0)),
+                str(tipos.get('Enjuague', 0)),
+                f"${pago:,.0f}"
+            ], cols_nomina, bg=bg, first_color=C_DARK, last_color=C_GREEN)
+            
+        pdf.ln(6)
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.set_text_color(*C_GREEN)
+        pdf.cell(0, 8, f'Total de Nomina Estimada: ${total_empresa:,.0f}', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())
 

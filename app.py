@@ -37,6 +37,23 @@ def save_users(users):
     with open(users_path, 'w', encoding='utf-8') as f:
         json.dump(users, f, indent=2, ensure_ascii=False)
 
+def load_config():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, 'data', 'config.json')
+    if not os.path.exists(config_path):
+        return {"tarifas": {"General": 0, "Sencillo": 0, "Enjuague": 0}}
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {"tarifas": {"General": 0, "Sencillo": 0, "Enjuague": 0}}
+
+def save_config(config_data):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, 'data', 'config.json')
+    with open(config_path, 'w', encoding='utf-8') as f:
+        json.dump(config_data, f, indent=2, ensure_ascii=False)
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -76,6 +93,24 @@ def _recalcular_stats(db_data: dict) -> dict:
         'deficit':   deficit,
         'pct_cum':   pct_cum,
     })
+    
+    # Calcular pago_estimado para cada lavador
+    config = load_config()
+    tarifas = config.get('tarifas', {"General": 0, "Sencillo": 0, "Enjuague": 0})
+    
+    if 'lavadores_stats' in db_data:
+        for lavador, data in db_data['lavadores_stats'].items():
+            tipos = data.get('tipos', {})
+            pago = 0
+            for tipo, cantidad in tipos.items():
+                tarifa = 0
+                try:
+                    tarifa = float(tarifas.get(tipo, 0))
+                except:
+                    pass
+                pago += cantidad * tarifa
+            data['pago_estimado'] = pago
+            
     return db_data
 
 def calc_minutos(h_inicio, h_fin):
@@ -681,6 +716,23 @@ def api_delete_user():
     users = [u for u in users if u['username'] != username]
     save_users(users)
     return jsonify({'success': True, 'users': users})
+
+@app.route('/api/config/tarifas', methods=['GET'])
+@login_required
+@admin_required
+def api_get_tarifas():
+    config = load_config()
+    return jsonify(config.get('tarifas', {"General": 0, "Sencillo": 0, "Enjuague": 0}))
+
+@app.route('/api/config/tarifas', methods=['POST'])
+@login_required
+@admin_required
+def api_save_tarifas():
+    data = request.json or {}
+    config = load_config()
+    config['tarifas'] = data
+    save_config(config)
+    return jsonify({'success': True, 'tarifas': data})
 
 # ─── Arranque ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':

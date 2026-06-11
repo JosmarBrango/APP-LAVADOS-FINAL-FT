@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.vehiculos   = data.vehiculos;
       state.historial   = data.historial_lavados || [];
       state.historial_lavados = state.historial;
+      state.lavadores_stats = data.lavadores_stats || {};
     }
     if (stats && !stats.error) {
       state.serverStats = stats;
@@ -98,6 +99,7 @@ async function updateVehiculos(dbResponse) {
     state.vehiculos   = dbResponse.vehiculos;
     state.serverStats = dbResponse.stats || null;
     state.historial   = dbResponse.historial_lavados || [];
+    state.lavadores_stats = dbResponse.lavadores_stats || {};
   } else if (Array.isArray(dbResponse)) {
     state.vehiculos = dbResponse;
     // Refrescar stats del servidor
@@ -409,9 +411,15 @@ function renderPersonal() {
               <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;">Especialista de Lavado</div>
             </div>
           </div>
-          <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
-            <div style="font-size: 22px; font-weight: 800; color: var(--blue); line-height: 1;">${lavados.length}</div>
-            <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Lavados</div>
+          <div style="display:flex; gap:12px;">
+            <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
+              <div style="font-size: 16px; font-weight: 800; color: var(--green); line-height: 1;">$${(state.lavadores_stats && state.lavadores_stats[name] ? state.lavadores_stats[name].pago_estimado || 0 : 0).toLocaleString()}</div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Nómina Est.</div>
+            </div>
+            <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
+              <div style="font-size: 16px; font-weight: 800; color: var(--blue); line-height: 1;">${lavados.length}</div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Lavados</div>
+            </div>
           </div>
         </div>
         <div style="padding: 0 24px; overflow-y: auto; flex-grow:1; margin-top: 16px;">
@@ -1228,6 +1236,68 @@ function switchConfigTab(tabId, btnEl) {
   
   if (tabId === 'cuentas') {
     loadUsers();
+  } else if (tabId === 'nomina') {
+    loadTarifas();
+  }
+}
+
+async function loadTarifas() {
+  try {
+    const res = await fetch('/api/config/tarifas');
+    const data = await res.json();
+    document.getElementById('tarifaGeneral').value = '$ ' + (data['General'] || 0).toLocaleString('es-CO');
+    document.getElementById('tarifaSencillo').value = '$ ' + (data['Sencillo'] || 0).toLocaleString('es-CO');
+    document.getElementById('tarifaEnjuague').value = '$ ' + (data['Enjuague'] || 0).toLocaleString('es-CO');
+  } catch(e) {
+    showToast('Error cargando tarifas', 'err');
+  }
+}
+
+document.addEventListener('input', e => {
+  if (e.target && e.target.classList.contains('money-input')) {
+    let val = e.target.value.replace(/\D/g, '');
+    if (!val) { e.target.value = ''; return; }
+    e.target.value = '$ ' + parseInt(val, 10).toLocaleString('es-CO');
+  }
+});
+
+async function saveTarifas(e) {
+  e.preventDefault();
+  const getVal = (id) => parseFloat(document.getElementById(id).value.replace(/\D/g, '')) || 0;
+  
+  const data = {
+    'General': getVal('tarifaGeneral'),
+    'Sencillo': getVal('tarifaSencillo'),
+    'Enjuague': getVal('tarifaEnjuague'),
+  };
+  
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+  
+  try {
+    const res = await fetch('/api/config/tarifas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      showToast('Tarifas actualizadas ✓');
+      const dr = await fetch('/api/data');
+      const dd = await dr.json();
+      if (dd && dd.vehiculos) {
+        state.vehiculos = dd.vehiculos;
+        state.historial = dd.historial_lavados || [];
+        updateUI();
+      }
+    } else {
+      showToast('Error al guardar', 'err');
+    }
+  } catch(err) {
+    showToast('Error de conexión', 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar Tarifas';
   }
 }
 
