@@ -571,9 +571,9 @@ function renderKanbanBoard(prog, days) {
            ondragleave="onDragLeave(event, this)" 
            ondrop="onDrop(event, '${d}')"
            data-day="${d}">
-        <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding:12px 12px 0;">
-          ${dayLabel}
-          <span style="font-size:11px;color:var(--muted);">${items.length}/4</span>
+        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;padding:12px 12px 0;">
+          <span style="font-size:14px;font-weight:800;color:#fff;background:var(--accent);padding:8px 16px;border-radius:12px;box-shadow:0 4px 12px rgba(37,99,235,.25);letter-spacing:0.02em;text-transform:uppercase;">${dayLabel}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--s2);padding:6px 12px;border-radius:8px;border:1px solid var(--border);">${items.length} / 4</span>
         </div>
         <div style="overflow-y:auto;flex-grow:1;min-height:100px;padding:0 12px 12px;">
           ${items.map(v => renderMiniCard(v, d)).join('')}
