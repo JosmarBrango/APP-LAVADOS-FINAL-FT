@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flota Urabá — Panel de Lavados</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=13">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -14,6 +14,25 @@
 <div class="app">
   <!-- Mobile overlay -->
   <div class="sidebar-overlay" onclick="closeSidebarMobile()"></div>
+
+  <!-- Bottom Navigation (Mobile Only) -->
+  <div class="bottom-nav">
+    <button class="bn-item active" onclick="showView('diagnostico', document.querySelector('.nav-item[onclick*=\'diagnostico\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+      <span class="bn-icon">📊</span><span class="bn-text">Inicio</span>
+    </button>
+    <button class="bn-item" onclick="showView('programacion', document.querySelector('.nav-item[onclick*=\'programacion\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+      <span class="bn-icon">📅</span><span class="bn-text">Prog.</span>
+    </button>
+    <button class="bn-item" onclick="showView('lavados', document.querySelector('.nav-item[onclick*=\'lavados\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+      <span class="bn-icon">🧼</span><span class="bn-text">Lavados</span>
+    </button>
+    <button class="bn-item" onclick="showView('historial', document.querySelector('.nav-item[onclick*=\'historial\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+      <span class="bn-icon">📷</span><span class="bn-text">QR</span>
+    </button>
+    <button class="bn-item" onclick="document.getElementById('sidebar').classList.add('mobile-open'); document.querySelector('.sidebar-overlay').classList.add('open');">
+      <span class="bn-icon">☰</span><span class="bn-text">Menú</span>
+    </button>
+  </div>
 
   <!-- ═══ SIDEBAR ════════════════════════════════════════════════ -->
   <aside class="sidebar" id="sidebar">
