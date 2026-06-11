@@ -9,6 +9,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
+  // Si la pestaña/app se acaba de abrir (no hay sesión en memoria de pestaña), forzamos logout por seguridad
+  if (!sessionStorage.getItem('session_active')) {
+    window.location.href = '/logout';
+  }
   window.USER_ROLE = "{{ user.get('role', 'lavador') }}";
 </script>
 </head>
