@@ -1187,42 +1187,17 @@ async function _initQrPolling() {
 }
 
 function _showQrAlert(event) {
-  const alertEl = document.getElementById('qrAlert');
-  if (!alertEl) return;
-
-  document.getElementById('qaPlaca').textContent   = event.placa      || '—';
-  document.getElementById('qaLavador').textContent = event.lavador     || 'N/D';
-  document.getElementById('qaTipo').textContent    = event.tipo_lavado || 'General';
-
-  _playNotificationSound();
-
-  alertEl.classList.add('show');
-  clearTimeout(window._qrAlertTimer);
-  window._qrAlertTimer = setTimeout(() => alertEl.classList.remove('show'), 9000);
+  const placa = event.placa || 'Desconocida';
+  const tipo = event.tipo_lavado || 'General';
+  showToast(`✅ Lavado Registrado: ${placa} (${tipo})`);
 }
 
 function closeQrAlert() {
-  const alertEl = document.getElementById('qrAlert');
-  if (alertEl) alertEl.classList.remove('show');
-  clearTimeout(window._qrAlertTimer);
+  // Ya no se usa la alerta flotante intrusiva
 }
 
 function _playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [880, 1100].forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.2);
-      osc.start(ctx.currentTime + i * 0.12);
-      osc.stop(ctx.currentTime + i * 0.12 + 0.22);
-    });
-  } catch(e) {}
+  // El usuario pidió quitar el sonido
 }
 
 // ─── Inicializar polling cuando carga la app ──────────────────────────────
