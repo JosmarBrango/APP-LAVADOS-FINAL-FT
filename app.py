@@ -4,8 +4,10 @@ import threading
 import json
 from datetime import date, datetime
 from io import BytesIO
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from services import process_csv, allowed_file, generar_programacion
 import database
 
@@ -19,6 +21,37 @@ LATEST_DATA_KEY = 'latest_upload'
 # Inicializar carpetas y DB (para que funcione con Gunicorn en Render)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 database.init_db()
+
+# ─── Sistema de Usuarios y Roles ──────────────────────────────────────────────
+def load_users():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    users_path = os.path.join(base_dir, 'data', 'usuarios_app.json')
+    if not os.path.exists(users_path):
+        return []
+    with open(users_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def save_users(users):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    users_path = os.path.join(base_dir, 'data', 'usuarios_app.json')
+    with open(users_path, 'w', encoding='utf-8') as f:
+        json.dump(users, f, indent=2, ensure_ascii=False)
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session or session.get('role') != 'admin':
+            return jsonify({'error': 'Acceso denegado: solo administradores'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ─── Helpers internos ─────────────────────────────────────────────────────────
 def _recalcular_stats(db_data: dict) -> dict:
@@ -76,11 +109,36 @@ def update_lavadores_stats(db_data, lavador, tipo_lavado, minutos):
     l_stat['tiempo_total_minutos'] += minutos
 
 # ─── Rutas principales ────────────────────────────────────────────────────────
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        users = load_users()
+        
+        user = next((u for u in users if u['username'] == username and u['password'] == password and u.get('active', True)), None)
+        if user:
+            session['user'] = user['username']
+            session['role'] = user['role']
+            session['name'] = user.get('name', username)
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Credenciales incorrectas o cuenta inactiva.')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user=session)
 
 @app.route('/api/data')
+@login_required
 def get_data():
     data = database.get_data(LATEST_DATA_KEY)
     if data:
@@ -89,6 +147,7 @@ def get_data():
 
 # ─── MEJORA #3: /api/stats — KPIs siempre calculados en el backend ────────────
 @app.route('/api/stats')
+@login_required
 def get_stats():
     """Devuelve estadísticas recalculadas en tiempo real desde el backend."""
     db_data = database.get_data(LATEST_DATA_KEY)
@@ -100,6 +159,8 @@ def get_stats():
 
 # ─── MEJORA #1: /api/programacion — Algoritmo en Python ──────────────────────
 @app.route('/api/programacion', methods=['POST'])
+@login_required
+@admin_required
 def get_programacion():
     """
     Genera la propuesta de programación de lavados para un rango de fechas dado.
@@ -136,6 +197,8 @@ def get_programacion():
     })
 
 @app.route('/api/programacion/update_fecha', methods=['POST'])
+@login_required
+@admin_required
 def update_fecha_prog():
     data = request.json or {}
     placa = data.get('placa')
@@ -161,6 +224,8 @@ def update_fecha_prog():
 
 # ─── Upload CSV ───────────────────────────────────────────────────────────────
 @app.route('/upload', methods=['POST'])
+@login_required
+@admin_required
 def upload():
     if 'file' not in request.files:
         return jsonify({'error': 'No se recibió ningún archivo.'}), 400
@@ -189,6 +254,8 @@ def upload():
 
 # ─── Lavados (add / remove) ───────────────────────────────────────────────────
 @app.route('/api/lavado/add', methods=['POST'])
+@login_required
+@admin_required
 def add_lavado():
     data = request.json or {}
     placa = data.get('placa')
@@ -227,6 +294,8 @@ def add_lavado():
     return jsonify(db_data)
 
 @app.route('/api/lavado/remove', methods=['POST'])
+@login_required
+@admin_required
 def remove_lavado():
     data  = request.json or {}
     placa = data.get('placa')
@@ -255,6 +324,7 @@ def remove_lavado():
     return jsonify(db_data)
 
 @app.route('/api/lavado/add_manual', methods=['POST'])
+@login_required
 def add_lavado_manual():
     data  = request.json or {}
     placa = data.get('placa')
@@ -325,6 +395,8 @@ def add_lavado_manual():
 
 # ─── CRUD Vehículos ───────────────────────────────────────────────────────────
 @app.route('/api/vehiculo/add', methods=['POST'])
+@login_required
+@admin_required
 def add_vehiculo():
     data    = request.json or {}
     db_data = database.get_data(LATEST_DATA_KEY) or {'vehiculos': [], 'stats': {'n_meses': 3}, 'chartData': {}}
@@ -352,6 +424,8 @@ def add_vehiculo():
     return jsonify(db_data)
 
 @app.route('/api/vehiculo/edit', methods=['POST'])
+@login_required
+@admin_required
 def edit_vehiculo():
     data  = request.json or {}
     placa = data.get('placa')
@@ -373,6 +447,8 @@ def edit_vehiculo():
     return jsonify(db_data)
 
 @app.route('/api/vehiculo/remove', methods=['POST'])
+@login_required
+@admin_required
 def remove_vehiculo():
     data  = request.json or {}
     placa = data.get('placa')
@@ -388,6 +464,8 @@ def remove_vehiculo():
 
 # ─── Exportar PDF ejecutivo ───────────────────────────────────────────────────
 @app.route('/exportar-pdf', methods=['POST'])
+@login_required
+@admin_required
 def exportar_pdf():
     """
     Genera y descarga el reporte PDF ejecutivo en base al rango de fechas y vehículos.
@@ -439,6 +517,7 @@ def exportar_pdf():
 
 # ─── Registro por QR (página móvil para supervisores) ───────────────────────
 @app.route('/registro/<placa>', methods=['GET', 'POST'])
+@login_required
 def registro_qr(placa):
     """
     GET  — Muestra el formulario de registro de lavado (página móvil).
@@ -548,8 +627,63 @@ def api_last_qr_event():
         return jsonify({'event': None})
     return jsonify({'event': db_data.get('last_qr_event')})
 
+# ─── Configuración de Usuarios (API) ─────────────────────────────────────────────────────────────
+@app.route('/api/users', methods=['GET'])
+@login_required
+@admin_required
+def api_get_users():
+    users = load_users()
+    # Removemos contraseñas si queremos seguridad extra, pero por facilidad las mandamos para que el admin las vea
+    return jsonify(users)
+
+@app.route('/api/users/save', methods=['POST'])
+@login_required
+@admin_required
+def api_save_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+    name = data.get('name', '').strip()
+    role = data.get('role', 'lavador').strip()
+    active = data.get('active', True)
+    
+    if not username or not password:
+        return jsonify({'error': 'Usuario y contraseña son requeridos.'}), 400
+        
+    users = load_users()
+    existing = next((u for u in users if u['username'] == username), None)
+    
+    if existing:
+        existing['password'] = password
+        existing['name'] = name
+        existing['role'] = role
+        existing['active'] = active
+    else:
+        users.append({
+            'username': username,
+            'password': password,
+            'name': name,
+            'role': role,
+            'active': active
+        })
+        
+    save_users(users)
+    return jsonify({'success': True, 'users': users})
+
+@app.route('/api/users/delete', methods=['POST'])
+@login_required
+@admin_required
+def api_delete_user():
+    data = request.json or {}
+    username = data.get('username', '').strip()
+    
+    users = load_users()
+    users = [u for u in users if u['username'] != username]
+    save_users(users)
+    return jsonify({'success': True, 'users': users})
+
 # ─── Arranque ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     threading.Timer(1.0, lambda: webbrowser.open('http://127.0.0.1:5001')).start()
     print('\n  * Dashboard corriendo en: http://127.0.0.1:5001\n')
-    app.run(port=5001)
+    app.run(port=5001, debug=True, use_reloader=False)

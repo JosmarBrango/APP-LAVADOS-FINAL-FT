@@ -8,6 +8,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  window.USER_ROLE = "{{ user.get('role', 'lavador') }}";
+</script>
 </head>
 <body>
 
@@ -63,12 +66,14 @@
           <button class="nav-item" onclick="showView('promedios', this)" data-tooltip="Promedios por día">
             <span class="nav-icon">🔥</span><span class="nav-text">Promedios por día</span>
           </button>
+          
           <button class="nav-item" onclick="showView('programacion', this)" data-tooltip="Propuesta de programación">
             <span class="nav-icon">📅</span><span class="nav-text">Propuesta de programación</span>
           </button>
           <button class="nav-item" onclick="showView('vehiculos', this)" data-tooltip="Gestión de vehículos">
             <span class="nav-icon">🚛</span><span class="nav-text">Gestión de vehículos</span>
           </button>
+          
           <button class="nav-item" onclick="showView('lavados', this)" data-tooltip="Todos los lavados">
             <span class="nav-icon">🧼</span><span class="nav-text">Todos los lavados</span>
           </button>
@@ -97,9 +102,17 @@
           <span class="ng-text">Herramientas</span><span class="ng-arrow">▼</span>
         </button>
         <div class="nav-group-items">
+          {% if user.get('role') == 'admin' %}
           <button class="nav-item" onclick="openModal('modalImport')" data-tooltip="Importar CSV">
             <span class="nav-icon">📂</span><span class="nav-text">Importar CSV</span>
           </button>
+          <button class="nav-item" onclick="showView('configuracion', this)" data-tooltip="Configuración">
+            <span class="nav-icon">⚙️</span><span class="nav-text">Configuración</span>
+          </button>
+          {% endif %}
+          <a href="{{ url_for('logout') }}" class="nav-item" data-tooltip="Cerrar sesión" style="text-decoration:none;">
+            <span class="nav-icon" style="color:var(--red)">🚪</span><span class="nav-text" style="color:var(--red)">Cerrar sesión</span>
+          </a>
         </div>
       </div>
 
@@ -224,14 +237,16 @@
           </div>
           <div style="display:flex;flex-direction:column;gap:6px;">
             <label style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Vehículos</label>
-            <select id="progVehiculosFiltro" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
+            <select id="progVehiculosFiltro" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;" {% if user.get('role') != 'admin' %}disabled{% endif %}>
               <option value="todos">Todos los vehículos</option>
               <option value="sin_lavado">Solo sin lavados</option>
             </select>
           </div>
+          {% if user.get('role') == 'admin' %}
           <button class="btn btn-primary" onclick="renderProgramacion()" style="padding:10px 20px;">
             Generar Propuesta
           </button>
+          {% endif %}
         </div>
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
           <button id="toggleUnassignedBtn" class="btn btn-ghost" onclick="toggleUnassigned()" style="padding:7px 14px;font-size:12px;display:none;">Ocultar Sin Asignar</button>
@@ -244,9 +259,11 @@
         <div class="filter-bar">
           <select id="vehMun" onchange="renderVehiculos()"><option value="">Todos los municipios</option></select>
           <input id="vehSearch" type="text" placeholder="Buscar placa…" oninput="renderVehiculos()" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
+          {% if user.get('role') == 'admin' %}
           <button class="btn btn-primary" onclick="openModal('modalVehicle')" style="padding:9px 18px;font-size:13px;gap:6px;">
             ➕ Agregar vehículo
           </button>
+          {% endif %}
           <span class="tbl-count" id="vehCount">0 vehículos</span>
         </div>
         <div class="table-wrap">
@@ -255,7 +272,9 @@
               <tr>
                 <th>Placa</th><th>Municipio</th><th>Tipo</th><th>Ruta</th>
                 <th>Supervisor</th><th>Último Lavado</th><th>Lav. Gral.</th>
+                {% if user.get('role') == 'admin' %}
                 <th style="text-align:right">Acciones</th>
+                {% endif %}
               </tr>
             </thead>
             <tbody id="vehBody"></tbody>
@@ -369,13 +388,61 @@
             <div class="rc-title">Inventario de Flota</div>
             <div class="rc-desc">Listado completo de todos los vehículos con su estado y lavados registrados.</div>
             <div class="rc-field"><input type="text" id="pdfRespFlota" placeholder="Nombre del responsable" class="rc-input"></div>
+            {% if user.get('role') == 'admin' %}
             <button class="rc-btn" onclick="descargarPDF('flota', this)">Descargar PDF</button>
+            {% else %}
+            <div style="font-size:12px;color:var(--muted);margin-top:10px;">Solo disponible para administradores</div>
+            {% endif %}
           </div>
         </div>
       </div>
 
       <!-- ─── VISTA: Personal y Rendimiento ─────────────────── -->
       <div id="view-personal" class="section"></div>
+
+      <!-- ─── VISTA: Configuración ──────────────────────────── -->
+      {% if user.get('role') == 'admin' %}
+      <div id="view-configuracion" class="section">
+        <div class="sec-hdr" style="margin-bottom:28px;">
+          <div class="sec-title" style="font-size:22px;font-weight:800;letter-spacing:-0.02em;">Configuración del Sistema</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px;">Administra el acceso y las preferencias de la aplicación.</div>
+        </div>
+        
+        <div class="config-tabs" style="display:flex;gap:12px;margin-bottom:24px;border-bottom:1px solid var(--border);">
+          <button class="config-tab active" onclick="switchConfigTab('cuentas', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;font-family:var(--sans);">👥 Cuentas de Acceso</button>
+          <button class="config-tab" onclick="switchConfigTab('general', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">⚙️ General</button>
+          <button class="config-tab" onclick="switchConfigTab('avanzado', this)" style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">🛠️ Avanzado</button>
+        </div>
+        
+        <div id="tab-cuentas" class="config-panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:16px;font-weight:700;">Usuarios Registrados</div>
+            <button class="btn btn-primary" onclick="openUserModal()" style="padding:8px 16px;font-size:13px;">➕ Nuevo Usuario</button>
+          </div>
+          <div class="table-wrap">
+            <table class="tbl">
+              <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead>
+              <tbody id="usersBody"></tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div id="tab-general" class="config-panel" style="display:none;">
+          <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm);">
+            <div style="font-weight:600;margin-bottom:12px;">Preferencias Globales</div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Próximamente: configuración de horas laborales, metas de KPIs, y notificaciones de WhatsApp integradas.</p>
+          </div>
+        </div>
+        
+        <div id="tab-avanzado" class="config-panel" style="display:none;">
+          <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm);">
+            <div style="font-weight:600;margin-bottom:12px;">Gestión de Base de Datos</div>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Desde aquí podrás exportar copias de seguridad completas de todo el sistema.</p>
+            <button class="btn btn-ghost" style="color:var(--red);border-color:rgba(239,68,68,0.3);">⚠️ Borrar toda la base de datos</button>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
     </div><!-- /content -->
   </main>
@@ -516,7 +583,38 @@
 <!-- Toast -->
 <div id="toast" class="toast"><span id="toastMsg"></span></div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}?v=14"></script>
+<!-- Modal User (Configuración) -->
+<div class="modal-bg" id="modalUser">
+  <div class="modal">
+    <div class="modal-title" id="muTitle">Nuevo Usuario</div>
+    <div class="modal-sub" id="muSub">Crea una nueva cuenta de acceso al sistema.</div>
+    <form id="formUser" onsubmit="saveUser(event)">
+      <div class="field-row">
+        <div class="field"><label>Usuario</label><input type="text" id="muUsername" required></div>
+        <div class="field"><label>Contraseña</label><input type="text" id="muPassword" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Nombre Completo</label><input type="text" id="muName" required></div>
+        <div class="field"><label>Rol</label>
+          <select id="muRole" required style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+            <option value="lavador">Lavador</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="muActive" checked style="width:18px;height:18px;">
+        <label for="muActive" style="margin:0;cursor:pointer;">Cuenta activa</label>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalUser')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}?v=17"></script>
 <script>
   // ── Sidebar: mobile open/close ─────────────────────────────────
   function openSidebarMobile() {

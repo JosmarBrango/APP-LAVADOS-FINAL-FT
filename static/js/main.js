@@ -529,8 +529,11 @@ function renderKanbanBoard(prog, days) {
       tooltip += `\n\n(Asígnale un día para calcular su hora esperada)`;
     }
     
+    const draggableStr = window.USER_ROLE === 'admin' ? `draggable="true" ondragstart="onDragStart(event, '${v.placa}')" ondragend="onDragEnd(event)"` : '';
+    const cursorStr = window.USER_ROLE === 'admin' ? 'cursor:grab;' : 'cursor:default;';
+    
     return `
-      <div class="prog-card mini" title="${tooltip}" draggable="true" ondragstart="onDragStart(event, '${v.placa}')" ondragend="onDragEnd(event)" id="veh-${v.placa}" style="margin-bottom:8px;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);cursor:grab;transition:transform 0.1s;position:relative;">
+      <div class="prog-card mini" title="${tooltip}" ${draggableStr} id="veh-${v.placa}" style="margin-bottom:8px;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);${cursorStr}transition:transform 0.1s;position:relative;">
         <div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;background:${color};border-radius:0 3px 3px 0;"></div>
         <div class="prog-placa" style="font-weight:600;font-size:14px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding-left:8px;">
            ${v.placa} 
@@ -544,11 +547,11 @@ function renderKanbanBoard(prog, days) {
   let html = '';
   
   // Columna: Sin asignar
+  const dropUnassignedStr = window.USER_ROLE === 'admin' ? `ondragover="onDragOverUnassigned(event, this)" ondragleave="onDragLeaveUnassigned(event, this)" ondrop="onDrop(event, null)"` : '';
+  
   html += `
     <div id="unassignedPanel" class="kanban-col" style="background:transparent;border-radius:12px;display:flex;flex-direction:column;height:100%;border:1px dashed var(--border2);transition:opacity 0.2s;"
-         ondragover="onDragOverUnassigned(event, this)" 
-         ondragleave="onDragLeaveUnassigned(event, this)" 
-         ondrop="onDrop(event, null)">
+         ${dropUnassignedStr}>
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text);padding:12px 12px 0;">
         Vehículos sin asignar <span style="font-size:11px;color:var(--muted);float:right">${unassigned.length}</span>
       </div>
@@ -565,11 +568,11 @@ function renderKanbanBoard(prog, days) {
     const isFull = items.length >= 4;
     const dayLabel = `${DOW_FULL[dateObj.getDay()]} ${dateObj.getDate()} ${NOMBRES_MESES[dateObj.getMonth()].substr(0,3)}`;
     
+    const dropStr = window.USER_ROLE === 'admin' ? `ondragover="onDragOver(event, this, ${items.length})" ondragleave="onDragLeave(event, this)" ondrop="onDrop(event, '${d}')"` : '';
+    
     html += `
       <div class="kanban-col ${isFull ? 'full' : ''}" style="background:var(--surface);border-radius:12px;display:flex;flex-direction:column;height:100%;border:1px solid var(--border);transition:border-color 0.2s;"
-           ondragover="onDragOver(event, this, ${items.length})" 
-           ondragleave="onDragLeave(event, this)" 
-           ondrop="onDrop(event, '${d}')"
+           ${dropStr}
            data-day="${d}">
         <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;padding:12px 12px 0;">
           <span style="font-size:14px;font-weight:800;color:#fff;background:var(--accent);padding:8px 16px;border-radius:12px;box-shadow:0 4px 12px rgba(37,99,235,.25);letter-spacing:0.02em;text-transform:uppercase;">${dayLabel}</span>
@@ -709,13 +712,14 @@ function renderVehiculos() {
       <td style="font-size:11px;color:var(--muted)">${v.sup}</td>
       <td style="font-family:var(--mono);font-size:11px">${v.ultimo}</td>
       <td style="font-family:var(--mono);font-size:14px;font-weight:600">${v.lavGen}</td>
+      ${window.USER_ROLE === 'admin' ? `
       <td style="text-align:right">
         <button class="act-btn wash" onclick="quitarLavado('${v.placa}')">−</button>
         <button class="act-btn wash" onclick="sumarLavado('${v.placa}')">+</button>
         <button class="act-btn qr"   onclick="showQR('${v.placa}')" title="Ver QR para registro en campo">QR</button>
         <button class="act-btn edit" onclick="editVehicle('${v.placa}')" style="margin-left:6px">Editar</button>
         <button class="act-btn del"  onclick="deleteVehicle('${v.placa}')">Eliminar</button>
-      </td>
+      </td>` : ''}
     </tr>`).join('');
 }
 
@@ -1225,5 +1229,128 @@ function _playNotificationSound() {
 document.addEventListener('DOMContentLoaded', () => {
   // Se llama aquí para asegurar que se ejecuta después del DOMContentLoaded principal
   // El DOMContentLoaded de arriba ya carga los datos; este encola el polling.
-  setTimeout(_initQrPolling, 1500);
+  setTimeout(_initQrPolling, 2000);
 });
+
+// ─── Configuración y Gestión de Usuarios ──────────────────────────────────────
+function switchConfigTab(tabId, btnEl) {
+  // Ocultar paneles
+  document.querySelectorAll('.config-panel').forEach(p => p.style.display = 'none');
+  // Quitar active de botones
+  document.querySelectorAll('.config-tab').forEach(b => {
+    b.classList.remove('active');
+    b.style.color = 'var(--muted)';
+    b.style.borderBottomColor = 'transparent';
+    b.style.fontWeight = '500';
+  });
+  
+  // Activar tab
+  document.getElementById('tab-' + tabId).style.display = 'block';
+  btnEl.classList.add('active');
+  btnEl.style.color = 'var(--accent)';
+  btnEl.style.borderBottomColor = 'var(--accent)';
+  btnEl.style.fontWeight = '600';
+  
+  if (tabId === 'cuentas') {
+    loadUsers();
+  }
+}
+
+async function loadUsers() {
+  try {
+    const res = await fetch('/api/users');
+    const users = await res.json();
+    
+    document.getElementById('usersBody').innerHTML = users.map(u => `
+      <tr>
+        <td style="font-weight:600">${u.username}</td>
+        <td>${u.name}</td>
+        <td><span class="badge ${u.role === 'admin' ? 'b-ok' : 'b-warn'}">${u.role}</span></td>
+        <td><span class="badge ${u.active ? 'b-ok' : 'b-crit'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
+        <td style="text-align:right">
+          <button class="act-btn edit" onclick="editUser('${u.username}')">Editar</button>
+          <button class="act-btn del" onclick="deleteUser('${u.username}')">Eliminar</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    // Guardar temporalmente
+    window._usersCache = users;
+  } catch(e) {
+    showToast('Error cargando usuarios', 'err');
+  }
+}
+
+function openUserModal() {
+  document.getElementById('muTitle').textContent = 'Nuevo Usuario';
+  document.getElementById('muSub').textContent = 'Crea una nueva cuenta de acceso al sistema.';
+  document.getElementById('formUser').reset();
+  document.getElementById('muUsername').readOnly = false;
+  openModal('modalUser');
+}
+
+function editUser(username) {
+  const users = window._usersCache || [];
+  const u = users.find(x => x.username === username);
+  if (!u) return;
+  
+  document.getElementById('muTitle').textContent = 'Editar Usuario';
+  document.getElementById('muSub').textContent = `Modificando datos de ${username}`;
+  document.getElementById('muUsername').value = u.username;
+  document.getElementById('muUsername').readOnly = true;
+  document.getElementById('muPassword').value = u.password || ''; // Enviar contraseña en caso de json local
+  document.getElementById('muName').value = u.name;
+  document.getElementById('muRole').value = u.role;
+  document.getElementById('muActive').checked = u.active;
+  
+  openModal('modalUser');
+}
+
+async function saveUser(e) {
+  e.preventDefault();
+  const username = document.getElementById('muUsername').value.trim();
+  const password = document.getElementById('muPassword').value.trim();
+  const name = document.getElementById('muName').value.trim();
+  const role = document.getElementById('muRole').value;
+  const active = document.getElementById('muActive').checked;
+  
+  try {
+    const res = await fetch('/api/users/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, name, role, active })
+    });
+    const result = await res.json();
+    if (result.error) {
+      showToast(result.error, 'err');
+    } else {
+      showToast('Usuario guardado');
+      closeModal('modalUser');
+      loadUsers();
+    }
+  } catch(e) {
+    showToast('Error al guardar', 'err');
+  }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`¿Estás seguro de eliminar el usuario ${username}?`)) return;
+  
+  try {
+    const res = await fetch('/api/users/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    const result = await res.json();
+    if (result.error) {
+      showToast(result.error, 'err');
+    } else {
+      showToast('Usuario eliminado', 'err');
+      loadUsers();
+    }
+  } catch(e) {
+    showToast('Error al eliminar', 'err');
+  }
+}
+
