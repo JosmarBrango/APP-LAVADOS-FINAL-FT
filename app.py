@@ -18,6 +18,22 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 LATEST_DATA_KEY = 'latest_upload'
 
+def _get_full_db_data():
+    return {
+        'vehiculos': database.get_all_vehiculos(),
+        'historial_lavados': database.get_all_lavados(),
+        'stats': database.get_data('stats') or {},
+        'chartData': database.get_data('chartData') or {},
+        'programacion_manual': database.get_data('programacion_manual') or {}
+    }
+
+def _save_full_db_data(db_data):
+    database.upsert_vehiculos(db_data.get('vehiculos', []))
+    database.save_data('stats', db_data.get('stats', {}))
+    database.save_data('chartData', db_data.get('chartData', {}))
+    database.save_data('programacion_manual', db_data.get('programacion_manual', {}))
+
+
 # Inicializar carpetas y DB (para que funcione con Gunicorn en Render)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 database.init_db()
@@ -182,7 +198,7 @@ def index():
 @app.route('/api/data')
 @login_required
 def get_data():
-    data = database.get_data(LATEST_DATA_KEY)
+    data = _get_full_db_data()
     if data:
         return jsonify(data)
     return jsonify({'error': 'Sin datos. Sube un archivo CSV para comenzar.'})
@@ -192,7 +208,7 @@ def get_data():
 @login_required
 def get_stats():
     """Devuelve estadísticas recalculadas en tiempo real desde el backend."""
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'Sin datos cargados.'}), 400
 
@@ -221,7 +237,7 @@ def get_programacion():
     if not start_date or not end_date:
         return jsonify({'error': 'Faltan fechas de inicio o fin.'}), 400
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'Sin datos cargados.'}), 400
 
@@ -249,7 +265,7 @@ def update_fecha_prog():
     if not placa:
         return jsonify({'error': 'Falta la placa del vehículo.'}), 400
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'Sin datos cargados.'}), 400
 
@@ -261,7 +277,7 @@ def update_fecha_prog():
     else:
         prog_manual[placa] = str(nuevo_dia)
 
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify({'success': True, 'placa': placa, 'nuevo_dia': nuevo_dia})
 
 # ─── Upload CSV ───────────────────────────────────────────────────────────────
@@ -291,7 +307,9 @@ def upload():
     if 'error' in result:
         return jsonify(result), 422
 
-    database.save_data(LATEST_DATA_KEY, result)
+    database.upsert_vehiculos(result.get('vehiculos', []))
+    database.save_data('stats', result.get('stats', {}))
+    database.save_data('chartData', result.get('chartData', {}))
     return jsonify(result)
 
 # ─── Lavados (add / remove) ───────────────────────────────────────────────────
@@ -303,7 +321,7 @@ def add_lavado():
     placa = data.get('placa')
     tipo  = data.get('tipo')  # 'lavGen', 'Sencillo', 'Enjuague'
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
@@ -332,7 +350,7 @@ def add_lavado():
     elif tipo == 'Enjuague':
         db_data['chartData']['tiposLavado']['Enjuague'] += 1
 
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 @app.route('/api/lavado/remove', methods=['POST'])
@@ -343,7 +361,7 @@ def remove_lavado():
     placa = data.get('placa')
     tipo  = data.get('tipo')
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
@@ -362,7 +380,7 @@ def remove_lavado():
         if db_data['chartData']['tiposLavado'].get('Enjuague', 0) > 0:
             db_data['chartData']['tiposLavado']['Enjuague'] -= 1
 
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 @app.route('/api/lavado/add_manual', methods=['POST'])
@@ -376,7 +394,7 @@ def add_lavado_manual():
     tipo_lavado = data.get('tipo_lavado', 'General')
     lavador     = data.get('lavador', '')
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
@@ -429,7 +447,7 @@ def add_lavado_manual():
             pass
 
     db_data = _recalcular_stats(db_data)
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 # ─── CRUD Vehículos ───────────────────────────────────────────────────────────
@@ -438,7 +456,7 @@ def add_lavado_manual():
 @admin_required
 def add_vehiculo():
     data    = request.json or {}
-    db_data = database.get_data(LATEST_DATA_KEY) or {'vehiculos': [], 'stats': {'n_meses': 3}, 'chartData': {}}
+    db_data = _get_full_db_data() or {'vehiculos': [], 'stats': {'n_meses': 3}, 'chartData': {}}
 
     placa = (data.get('placa') or '').strip().upper()
     if not placa:
@@ -459,7 +477,7 @@ def add_vehiculo():
     }
     db_data.setdefault('vehiculos', []).append(nuevo)
     db_data = _recalcular_stats(db_data)
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 @app.route('/api/vehiculo/edit', methods=['POST'])
@@ -469,7 +487,7 @@ def edit_vehiculo():
     data  = request.json or {}
     placa = data.get('placa')
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
@@ -482,7 +500,7 @@ def edit_vehiculo():
     vehiculo['ruta'] = data.get('ruta', vehiculo['ruta']).upper()
     vehiculo['sup']  = data.get('sup',  vehiculo['sup']).upper()
 
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 @app.route('/api/vehiculo/remove', methods=['POST'])
@@ -492,13 +510,13 @@ def remove_vehiculo():
     data  = request.json or {}
     placa = data.get('placa')
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
     db_data['vehiculos'] = [v for v in db_data.get('vehiculos', []) if v['placa'] != placa]
     db_data = _recalcular_stats(db_data)
-    database.save_data(LATEST_DATA_KEY, db_data)
+    _save_full_db_data(db_data)
     return jsonify(db_data)
 
 # ─── Exportar PDF ejecutivo ───────────────────────────────────────────────────
@@ -529,7 +547,7 @@ def exportar_pdf():
     if not start_date or not end_date:
         return jsonify({'error': 'Faltan fechas de inicio o fin.'}), 400
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'Sin datos cargados. Sube un CSV primero.'}), 400
 
@@ -574,7 +592,7 @@ def exportar_nomina_pdf():
     hasta      = data.get('hasta', '').strip()
     responsable = data.get('responsable', '').strip()
 
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'error': 'Sin datos cargados.'}), 400
 
@@ -601,15 +619,10 @@ def exportar_nomina_pdf():
 @app.route('/registro/<placa>', methods=['GET', 'POST'])
 @login_required
 def registro_qr(placa):
-    """
-    GET  — Muestra el formulario de registro de lavado (página móvil).
-    POST — Procesa el registro y redirige a la página de confirmación.
-    Accesible sin login: el supervisor escanea el QR y llena el formulario.
-    """
     import datetime as dt
 
     placa = placa.upper().strip()
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
 
     if not db_data:
         return render_template('registro.html', vehiculo=None,
@@ -618,7 +631,7 @@ def registro_qr(placa):
     vehiculo = next((v for v in db_data.get('vehiculos', []) if v['placa'] == placa), None)
     if not vehiculo:
         return render_template('registro.html', vehiculo=None,
-                               error=f'El veh\u00edculo con placa {placa} no fue encontrado en el sistema.')
+                               error=f'El vehículo con placa {placa} no fue encontrado en el sistema.')
 
     if request.method == 'POST':
         fecha = request.form.get('fecha', '').strip()
@@ -631,36 +644,16 @@ def registro_qr(placa):
             return render_template('registro.html', vehiculo=vehiculo,
                                    error='Faltan datos obligatorios en el formulario.')
 
-        # Incrementar lavados generales
         if tipo_lavado == 'General':
             vehiculo['lavGen'] = vehiculo.get('lavGen', 0) + 1
-            # Actualizar último lavado solo si es General
             parts = fecha.split('-')
             vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
-        
-        # Registrar en historial
-        historial = db_data.setdefault('historial_lavados', [])
-        historial.insert(0, {
-            'placa': placa,
-            'fecha': fecha,
-            'hora': hora_inicio,
-            'hora_inicio': hora_inicio,
-            'hora_fin': hora_fin,
-            'lavador': lavador,
-            'tipo_lavado': tipo_lavado,
-            'origen': 'qr_registro'
-        })
-        db_data['historial_lavados'] = historial[:200]
-        
-
-        # Actualizar promedio horaDow con promedio móvil (solo para lavado General)
-        if tipo_lavado == 'General':
+            
             try:
                 d_obj = dt.datetime.strptime(fecha, '%Y-%m-%d')
-                dow   = d_obj.isoweekday() % 7   # 0=Domingo
+                dow   = d_obj.isoweekday() % 7
                 hh, mm = map(int, hora_inicio.split(':'))
                 mins  = hh * 60 + mm
-
                 hora_dow = vehiculo.setdefault('horaDow', {})
                 dow_str  = str(dow)
                 existing = hora_dow.get(dow_str)
@@ -673,8 +666,23 @@ def registro_qr(placa):
                     hora_dow[dow_str] = {'s': hora_inicio, 'm': mins, 'n': 1, 'std': 0}
             except Exception:
                 pass
+        
+        # Registrar en la base de datos de lavados de manera persistente e infinita
+        nuevo_lavado = {
+            'placa': placa,
+            'fecha': fecha,
+            'hora': hora_inicio,
+            'hora_inicio': hora_inicio,
+            'hora_fin': hora_fin,
+            'lavador': lavador,
+            'tipo_lavado': tipo_lavado,
+            'origen': 'qr_registro'
+        }
+        database.add_lavado(nuevo_lavado)
+        
+        # Recargar historial para stats
+        db_data['historial_lavados'] = database.get_all_lavados()
 
-        # Guardar evento QR para notificaciones en tiempo real
         import time as _time
         db_data['last_qr_event'] = {
             'placa':      placa,
@@ -682,11 +690,11 @@ def registro_qr(placa):
             'tipo_lavado': tipo_lavado,
             'timestamp':  _time.time()
         }
+        database.save_data('last_qr_event', db_data['last_qr_event'])
 
         db_data = _recalcular_stats(db_data)
-        database.save_data(LATEST_DATA_KEY, db_data)
+        _save_full_db_data(db_data)
 
-        # Calcular fin estimado y formatear fecha para mostrar
         try:
             fecha_fmt = dt.datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
         except Exception:
@@ -701,7 +709,7 @@ def registro_qr(placa):
 # ─── Último evento QR (para polling de notificaciones) ───────────────────────────────────
 @app.route('/api/last-qr-event')
 def api_last_qr_event():
-    db_data = database.get_data(LATEST_DATA_KEY)
+    db_data = _get_full_db_data()
     if not db_data:
         return jsonify({'event': None})
     return jsonify({'event': db_data.get('last_qr_event')})
