@@ -94,22 +94,45 @@ def _recalcular_stats(db_data: dict) -> dict:
         'pct_cum':   pct_cum,
     })
     
+    # Reconstruir lavadores_stats desde el historial para que sea retroactivo
+    historial = db_data.get('historial_lavados', [])
+    lavadores_stats = {}
+    for h in historial:
+        lavador = h.get('lavador')
+        if not lavador: continue
+        lavador = lavador.strip().upper()
+        tipo_lavado = h.get('tipo_lavado', 'General')
+        minutos = calc_minutos(h.get('hora_inicio'), h.get('hora_fin'))
+        
+        l_stat = lavadores_stats.setdefault(lavador, {
+            'total_lavados': 0, 
+            'tiempo_total_minutos': 0, 
+            'tipos': {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
+        })
+        l_stat['total_lavados'] += 1
+        l_stat['tiempo_total_minutos'] += minutos
+        if tipo_lavado in l_stat['tipos']:
+            l_stat['tipos'][tipo_lavado] += 1
+        else:
+            l_stat['tipos'][tipo_lavado] = 1
+
+    db_data['lavadores_stats'] = lavadores_stats
+
     # Calcular pago_estimado para cada lavador
     config = load_config()
     tarifas = config.get('tarifas', {"General": 0, "Sencillo": 0, "Enjuague": 0})
     
-    if 'lavadores_stats' in db_data:
-        for lavador, data in db_data['lavadores_stats'].items():
-            tipos = data.get('tipos', {})
-            pago = 0
-            for tipo, cantidad in tipos.items():
-                tarifa = 0
-                try:
-                    tarifa = float(tarifas.get(tipo, 0))
-                except:
-                    pass
-                pago += cantidad * tarifa
-            data['pago_estimado'] = pago
+    for lavador, data in lavadores_stats.items():
+        tipos = data.get('tipos', {})
+        pago = 0
+        for tipo, cantidad in tipos.items():
+            tarifa = 0
+            try:
+                tarifa = float(tarifas.get(tipo, 0))
+            except:
+                pass
+            pago += cantidad * tarifa
+        data['pago_estimado'] = pago
             
     return db_data
 
@@ -125,23 +148,7 @@ def calc_minutos(h_inicio, h_fin):
     except Exception:
         return 0
 
-def update_lavadores_stats(db_data, lavador, tipo_lavado, minutos):
-    if not lavador: return
-    lavador = lavador.strip().upper()
-    stats = db_data.setdefault('lavadores_stats', {})
-    l_stat = stats.setdefault(lavador, {
-        'total_lavados': 0, 
-        'tiempo_total_minutos': 0, 
-        'tipos': {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
-    })
-    
-    l_stat['total_lavados'] += 1
-    if tipo_lavado in l_stat['tipos']:
-        l_stat['tipos'][tipo_lavado] += 1
-    else:
-        l_stat['tipos'][tipo_lavado] = 1
-        
-    l_stat['tiempo_total_minutos'] += minutos
+
 
 # ─── Rutas principales ────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -398,9 +405,6 @@ def add_lavado_manual():
     })
     db_data['historial_lavados'] = historial[:200]
     
-    # Actualizar estadisticas de lavadores
-    minutos = calc_minutos(hora_inicio, hora_fin)
-    update_lavadores_stats(db_data, lavador, tipo_lavado, minutos)
 
     # Actualizar horaDow con promedio móvil (actualiza el heatmap en tiempo real)
     if hora_inicio and fecha and tipo_lavado == 'General':
@@ -605,9 +609,6 @@ def registro_qr(placa):
         })
         db_data['historial_lavados'] = historial[:200]
         
-        # Actualizar estadisticas de lavadores
-        minutos = calc_minutos(hora_inicio, hora_fin)
-        update_lavadores_stats(db_data, lavador, tipo_lavado, minutos)
 
         # Actualizar promedio horaDow con promedio móvil (solo para lavado General)
         if tipo_lavado == 'General':

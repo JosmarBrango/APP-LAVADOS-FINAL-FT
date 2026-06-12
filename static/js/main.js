@@ -5,7 +5,6 @@ const CUTOFF   = 990;   // 16:30 en minutos
 const NOMBRES_MESES = ['enero','febrero','marzo','abril','mayo','junio',
                         'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
-// Meses dinámicos eliminados, ya no son necesarios para el tablero Kanban
 
 // ─── Estado global ────────────────────────────────────────────────────────────
 let state = {
@@ -38,6 +37,7 @@ const getBestDay = v => {
 const cellCls = m => m <= 870 ? "ideal" : m <= 930 ? "good" : m <= 990 ? "ok" : m <= 1020 ? "late" : "bad";
 const bCls    = n => n === 0 ? "b-crit" : n === 1 ? "b-warn" : "b-ok";
 const bTxt    = n => n === 0 ? "Crítico" : n === 1 ? "Bajo" : "OK";
+
 
 // ─── MEJORA #3: stats siempre del servidor ───────────────────────────────────
 function getStats() {
@@ -163,26 +163,13 @@ function populateFilters() {
   const muns = getMunicipios();
   const promMun = document.getElementById('promMun');
   const vehMun  = document.getElementById('vehMun');
-  const lavMun2 = document.getElementById('lavMun2');
   const selProm = promMun ? promMun.value : '';
   const selVeh  = vehMun  ? vehMun.value  : '';
-  const selLav  = lavMun2 ? lavMun2.value : '';
 
   const opts = '<option value="">Todos los municipios</option>' +
                muns.map(m => `<option value="${m}">${m}</option>`).join('');
   if (promMun) { promMun.innerHTML = opts; if (muns.includes(selProm)) promMun.value = selProm; }
   if (vehMun)  { vehMun.innerHTML  = opts; if (muns.includes(selVeh))  vehMun.value  = selVeh; }
-  if (lavMun2) { lavMun2.innerHTML  = opts; if (muns.includes(selLav))  lavMun2.value  = selLav; }
-
-  // Populate lavadores filter
-  const lavPersonal = document.getElementById('lavPersonal');
-  if (lavPersonal) {
-    const lavs = [...new Set((state.historial || []).map(h => h.lavador).filter(Boolean))].sort();
-    const cur = lavPersonal.value;
-    lavPersonal.innerHTML = '<option value="">Todos los lavadores</option>' +
-      lavs.map(l => `<option value="${l}">${l}</option>`).join('');
-    if (lavs.includes(cur)) lavPersonal.value = cur;
-  }
 }
 
 // ─── Navegación ───────────────────────────────────────────────────────────────
