@@ -386,7 +386,7 @@ body {
 .act-btn.qr:hover   { background: #CBD5E1; }
 
 /* ── Prog / Kanban ────────────────────────────────────────── */
-.prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; position: relative; overflow: hidden; box-shadow: var(--shadow-sm); }
+.prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; position: relative; box-shadow: var(--shadow-sm); }
 .prog-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; }
 .prog-card.t-ideal::before{background:var(--green)}.prog-card.t-good::before{background:#34D399}.prog-card.t-ok::before{background:var(--gold)}.prog-card.t-late::before{background:var(--amb)}.prog-card.t-noday::before{background:var(--red)}
 .prog-placa { font-family: var(--mono); font-size: 16px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; color: var(--text); }
