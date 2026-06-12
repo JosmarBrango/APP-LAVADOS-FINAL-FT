@@ -554,7 +554,50 @@ def exportar_pdf():
         download_name=nombre_archivo
     )
 
-# ─── Registro por QR (página móvil para supervisores) ───────────────────────
+# ─── Exportar PDF de Nómina por Período ──────────────────────────────────────
+@app.route('/api/exportar-nomina-pdf', methods=['POST'])
+@login_required
+@admin_required
+def exportar_nomina_pdf():
+    """
+    Genera y descarga el PDF de liquidación de nómina del período indicado.
+    Body JSON:
+      - desde:       'YYYY-MM-DD' o ''
+      - hasta:       'YYYY-MM-DD' o ''
+      - responsable: str (quien firma)
+    """
+    from flask import send_file
+    from pdf_report import generar_nomina_pdf
+
+    data       = request.json or {}
+    desde      = data.get('desde', '').strip()
+    hasta      = data.get('hasta', '').strip()
+    responsable = data.get('responsable', '').strip()
+
+    db_data = database.get_data(LATEST_DATA_KEY)
+    if not db_data:
+        return jsonify({'error': 'Sin datos cargados.'}), 400
+
+    config  = load_config()
+    tarifas = config.get('tarifas', {'General': 0, 'Sencillo': 0, 'Enjuague': 0})
+    historial = db_data.get('historial_lavados', [])
+
+    pdf_bytes = generar_nomina_pdf(historial, tarifas, responsable, desde, hasta)
+
+    buf = BytesIO(pdf_bytes)
+    buf.seek(0)
+
+    periodo = f'{desde}_al_{hasta}' if (desde and hasta) else (desde or hasta or 'completo')
+    nombre_archivo = f'Nomina_FlotaUraba_{periodo}.pdf'
+
+    return send_file(
+        buf,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=nombre_archivo
+    )
+
+
 @app.route('/registro/<placa>', methods=['GET', 'POST'])
 @login_required
 def registro_qr(placa):

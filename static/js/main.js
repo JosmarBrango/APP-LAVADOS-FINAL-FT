@@ -318,6 +318,42 @@ function renderPromedios() {
 }
 
 // ─── Vista Personal y Rendimiento ─────────────────────────────────────────────
+async function exportarNominaPdf() {
+  const desde  = document.getElementById('personalDesde')?.value  || '';
+  const hasta  = document.getElementById('personalHasta')?.value  || '';
+  const resp   = document.getElementById('personalResponsable')?.value || 'Administrador';
+
+  const btn = document.getElementById('btnExportNomina');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Generando PDF...'; }
+
+  try {
+    const res = await fetch('/api/exportar-nomina-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ desde, hasta, responsable: resp })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return showToast(err.error || 'Error al generar PDF', 'err');
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    const periodo = (desde && hasta) ? `${desde}_al_${hasta}` : (desde || hasta || 'completo');
+    a.download = `Nomina_FlotaUraba_${periodo}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('📄 PDF de nómina generado ✓');
+  } catch (e) {
+    showToast('Error de conexión', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '📄 Exportar Nómina PDF'; }
+  }
+}
+
 function renderPersonal() {
   _buildPersonalView(state.historial_lavados || []);
 }
@@ -360,10 +396,10 @@ function _buildPersonalView(historial) {
   const desde = desdeEl ? desdeEl.value : '';
   const hasta = hastaEl ? hastaEl.value : '';
 
-  // Filtrar historial por fechas
-  let histFiltrado = historial;
+  // Filtrar historial (solo los que tienen lavador asignado y por fechas)
+  let histFiltrado = historial.filter(h => h.lavador && h.lavador.trim() !== '');
   if (desde || hasta) {
-    histFiltrado = historial.filter(h => {
+    histFiltrado = histFiltrado.filter(h => {
       if (!h.fecha) return false;
       if (desde && h.fecha < desde) return false;
       if (hasta && h.fecha > hasta) return false;
@@ -414,9 +450,20 @@ function _buildPersonalView(historial) {
           <button onclick="document.getElementById('personalDesde').value='';document.getElementById('personalHasta').value='';_buildPersonalView(state.historial_lavados||[]);" style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--red-dim)';this.style.borderColor='var(--red)';this.style.color='var(--red)';" onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--muted)';">✕ Limpiar</button>
         </div>
       </div>
-      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
-        <span style="font-size:12px;background:var(--accent-dim);color:var(--accent);padding:4px 12px;border-radius:20px;font-weight:700;">${periodoLabel}</span>
-        <span style="font-size:12px;color:var(--muted);font-weight:600;">${totalRegistros} lavado${totalRegistros !== 1 ? 's' : ''} en el período</span>
+      <div style="margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;background:var(--accent-dim);color:var(--accent);padding:4px 12px;border-radius:20px;font-weight:700;">${periodoLabel}</span>
+          <span style="font-size:12px;color:var(--muted);font-weight:600;">${totalRegistros} lavado${totalRegistros !== 1 ? 's' : ''} en el período</span>
+        </div>
+        ${window.USER_ROLE === 'admin' ? `
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Responsable del reporte</label>
+            <input type="text" id="personalResponsable" placeholder="Nombre de quien firma..." style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--bg);outline:none;width:220px;">
+          </div>
+          <button id="btnExportNomina" onclick="exportarNominaPdf()" style="padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 12px rgba(22,163,74,0.3);white-space:nowrap;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(22,163,74,0.4)';" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(22,163,74,0.3)';">📄 Exportar Nómina PDF</button>
+        </div>
+        ` : ''}
       </div>
     </div>
 
