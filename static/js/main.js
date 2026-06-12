@@ -635,25 +635,47 @@ function renderKanbanBoard(prog, days) {
     const color = v.turno?.color || '#cbd5e1';
     
     // Generar texto para el tooltip (hover)
-    let tooltip = `Placa: ${v.placa}\nMunicipio: ${v.mun}\nRuta: ${v.ruta}`;
+    let tooltipHTML = `
+      <div class="tt-header">
+        <i class="fas fa-bus" style="color: var(--accent);"></i> ${v.placa}
+      </div>
+      <div class="tt-body">
+        <div class="tt-row"><span>Municipio:</span> <strong>${v.mun || 'N/D'}</strong></div>
+        <div class="tt-row"><span>Ruta:</span> <strong>${v.ruta || 'N/D'}</strong></div>
+    `;
+
     if (d && v.horaDow) {
       const dateObj = new Date(d + 'T12:00:00');
       const dow = dateObj.getDay();
       const hw = v.horaDow[String(dow)];
       if (hw && hw.s) {
-        tooltip += `\n\nHora esperada de lavado: ${hw.s} (basado en ${hw.n} registros)`;
+        tooltipHTML += `
+          <div class="tt-divider"></div>
+          <div class="tt-highlight">
+            <div><i class="fas fa-clock" style="color: var(--gold); margin-right: 4px;"></i> Hora esperada: <strong>${hw.s}</strong></div>
+            <span class="tt-muted">Calculado basado en ${hw.n} registros históricos</span>
+          </div>
+        `;
       } else {
-        tooltip += `\n\nHora esperada: Sin historial para este día de la semana`;
+        tooltipHTML += `
+          <div class="tt-divider"></div>
+          <div class="tt-muted text-center"><i class="fas fa-info-circle"></i> Sin historial suficiente para predecir hora</div>
+        `;
       }
     } else if (!d) {
-      tooltip += `\n\n(Asígnale un día para calcular su hora esperada)`;
+      tooltipHTML += `
+        <div class="tt-divider"></div>
+        <div class="tt-muted text-center"><i class="fas fa-info-circle"></i> Asígnale un día para calcular hora esperada</div>
+      `;
     }
+    tooltipHTML += `</div>`; // close tt-body
     
     const draggableStr = window.USER_ROLE === 'admin' ? `draggable="true" ondragstart="onDragStart(event, '${v.placa}')" ondragend="onDragEnd(event)"` : '';
     const cursorStr = window.USER_ROLE === 'admin' ? 'cursor:grab;' : 'cursor:default;';
     
     return `
-      <div class="prog-card mini" title="${tooltip}" ${draggableStr} id="veh-${v.placa}" style="margin-bottom:8px;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);${cursorStr}transition:transform 0.1s;position:relative;">
+      <div class="prog-card mini tooltip-container" ${draggableStr} id="veh-${v.placa}" style="margin-bottom:8px;background:var(--surface);padding:12px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow-sm);${cursorStr}transition:transform 0.1s;position:relative;">
+        <div class="custom-tooltip">${tooltipHTML}</div>
         <div style="position:absolute;left:0;top:10px;bottom:10px;width:3px;background:${color};border-radius:0 3px 3px 0;"></div>
         <div class="prog-placa" style="font-weight:600;font-size:14px;color:var(--text);display:flex;justify-content:space-between;align-items:center;padding-left:8px;">
            ${v.placa} 
