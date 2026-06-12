@@ -1222,17 +1222,8 @@ function onScanSuccess(decodedText, decodedResult) {
   
   if (placa && placa.length >= 5 && placa.length <= 7) {
     stopQRScanner();
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-    const time  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    
-    document.getElementById('mlPlaca').value = placa;
-    document.getElementById('mlFecha').value = today;
-    document.getElementById('mlHoraInicio').value = time;
-    document.getElementById('mlHoraFin').value = time;
-    openModal('modalLavado');
-    showToast(`QR detectado: ${placa}. Confirma el lavado.`, 'good');
+    // Redirigir directamente a la página de registro QR para que mantenga el origen 'qr_registro' y notifique
+    window.location.href = `/registro/${placa}`;
   } else {
     showToast('QR no reconocido o placa inválida', 'err');
   }
@@ -1298,6 +1289,37 @@ function renderTodosLavados() {
 // ─── QR Polling & Alertas en Tiempo Real ──────────────────────────────────
 let _lastQrTs = null;
 
+// Pedir permiso para notificaciones nativas
+if ('Notification' in window) {
+  Notification.requestPermission();
+}
+
+// Función para generar un sonido "ding" usando Web Audio API
+function playDing() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota A5
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.log('Audio error:', e);
+  }
+}
+
 async function _initQrPolling() {
   // Capture current timestamp silently (no alert on first load)
   try {
@@ -1331,7 +1353,20 @@ async function _initQrPolling() {
 function _showQrAlert(event) {
   const placa = event.placa || 'Desconocida';
   const tipo = event.tipo_lavado || 'General';
+  
+  // 1. Toast Visual
   showToast(`✅ Lavado Registrado: ${placa} (${tipo})`);
+  
+  // 2. Sonido Ding
+  playDing();
+  
+  // 3. Notificación Nativa de OS
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Nuevo Lavado Registrado', {
+      body: `Vehículo: ${placa}\nTipo: ${tipo}\nLavador: ${event.lavador || 'N/D'}`,
+      icon: '/static/img/icon.svg'
+    });
+  }
 }
 
 function closeQrAlert() {

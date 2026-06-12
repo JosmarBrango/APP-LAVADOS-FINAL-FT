@@ -1,0 +1,17 @@
+{
+  "name": "Panel de Lavados - Flota Urabá",
+  "short_name": "Lavados",
+  "description": "Aplicación para el registro y monitoreo de lavados de flota.",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#0D1F3C",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/img/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ]
+}

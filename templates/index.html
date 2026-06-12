@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flota Urabá — Panel de Lavados</title>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#2563EB">
+<link rel="apple-touch-icon" href="/static/img/icon.svg">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=18">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -684,6 +687,15 @@
   function toggleNavGroup(btn) {
     const group = btn.parentElement;
     group.classList.toggle('active');
+  }
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/sw.js')
+        .then(reg => console.log('SW Registered!', reg.scope))
+        .catch(err => console.log('SW Registration failed', err));
+    });
   }
 </script>
 </body>

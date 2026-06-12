@@ -24,7 +24,8 @@ def _get_full_db_data():
         'historial_lavados': database.get_all_lavados(),
         'stats': database.get_data('stats') or {},
         'chartData': database.get_data('chartData') or {},
-        'programacion_manual': database.get_data('programacion_manual') or {}
+        'programacion_manual': database.get_data('programacion_manual') or {},
+        'last_qr_event': database.get_data('last_qr_event')
     }
 
 def _save_full_db_data(db_data):

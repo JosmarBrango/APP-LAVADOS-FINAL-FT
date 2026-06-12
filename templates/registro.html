@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#FFFFFF">
   <title>Registrar Lavado{% if vehiculo %} — {{ vehiculo.placa }}{% endif %}</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/img/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -305,6 +307,47 @@
   {% endif %}
 
   <script>
+    // Registro de Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+      });
+    }
+
+    // Lógica Offline y Sincronización
+    function syncOfflineQueue() {
+      if (!navigator.onLine) return;
+      let queue = JSON.parse(localStorage.getItem('offlineLavados') || '[]');
+      if (queue.length === 0) return;
+      
+      let banner = document.createElement('div');
+      banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:var(--blue);color:white;text-align:center;padding:12px;z-index:9999;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.1);";
+      banner.innerText = `Sincronizando ${queue.length} registro(s) guardado(s) sin conexión...`;
+      document.body.appendChild(banner);
+      
+      Promise.all(queue.map(data => {
+        let fd = new URLSearchParams();
+        for(let k in data) if(k !== 'placa') fd.append(k, data[k]);
+        return fetch(`/registro/${data.placa}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: fd.toString()
+        });
+      })).then(() => {
+        localStorage.removeItem('offlineLavados');
+        banner.style.background = 'var(--green)';
+        banner.innerText = '¡Todos los registros sincronizados correctamente! ✅';
+        setTimeout(() => banner.remove(), 4000);
+      }).catch(e => {
+        banner.style.background = 'var(--red)';
+        banner.innerText = 'Error al sincronizar. Se reintentará más tarde.';
+        setTimeout(() => banner.remove(), 4000);
+      });
+    }
+
+    window.addEventListener('online', syncOfflineQueue);
+    window.addEventListener('load', syncOfflineQueue);
+
     // Pre-fill date and time with current local values
     (function() {
       const now = new Date();
@@ -318,13 +361,33 @@
       if (horaEl && !horaEl.value)  horaEl.value  = time;
       if (horaFinEl && !horaFinEl.value) horaFinEl.value = time;
 
-      document.getElementById('formReg')?.addEventListener('submit', function() {
+      document.getElementById('formReg')?.addEventListener('submit', function(e) {
+        // Intercepción Offline
+        if (!navigator.onLine) {
+          e.preventDefault();
+          const formData = new FormData(this);
+          const data = Object.fromEntries(formData.entries());
+          data.placa = "{{ vehiculo.placa }}"; // Inyectado por Jinja
+          
+          let queue = JSON.parse(localStorage.getItem('offlineLavados') || '[]');
+          queue.push(data);
+          localStorage.setItem('offlineLavados', JSON.stringify(queue));
+          
+          document.body.innerHTML = `
+            <div style="padding:40px 20px;text-align:center;font-family:sans-serif;height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+              <div style="font-size:60px;margin-bottom:20px;">📡❌</div>
+              <h2 style="color:#0F172A;margin-bottom:10px;">¡Guardado sin conexión!</h2>
+              <p style="color:#64748B;font-size:15px;line-height:1.5;">El registro se guardó de forma segura en tu celular porque no tienes internet.</p>
+              <p style="color:#10B981;font-size:15px;line-height:1.5;margin-top:10px;font-weight:600;">Se subirá automáticamente en cuanto recuperes la señal.</p>
+              <button onclick="location.reload()" style="margin-top:30px;padding:16px 32px;background:#0EA5E9;color:white;border-radius:14px;border:none;font-size:16px;font-weight:700;width:100%;">Volver</button>
+            </div>
+          `;
+          return;
+        }
+
         const btn = document.getElementById('btnConfirm');
         btn.innerHTML = '<span>⏳</span> Registrando…';
-        // Usar setTimeout para evitar cancelar el submit en algunos navegadores móviles (iOS Safari)
-        setTimeout(() => {
-          btn.disabled = true;
-        }, 0);
+        setTimeout(() => { btn.disabled = true; }, 0);
       });
     })();
   </script>
