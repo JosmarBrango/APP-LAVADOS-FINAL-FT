@@ -578,6 +578,10 @@ body {
   z-index: 1;
 }
 
+.tooltip-container:hover {
+  z-index: 9999 !important;
+}
+
 .tooltip-container:hover .custom-tooltip {
   visibility: visible;
   opacity: 1;
