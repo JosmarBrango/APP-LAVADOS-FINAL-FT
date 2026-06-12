@@ -103,7 +103,9 @@ async function updateVehiculos(dbResponse) {
     state.vehiculos   = dbResponse.vehiculos;
     state.serverStats = dbResponse.stats || null;
     state.historial   = dbResponse.historial_lavados || [];
+    state.historial_lavados = state.historial;
     state.lavadores_stats = dbResponse.lavadores_stats || {};
+    state.chartData   = dbResponse.chartData || null;
   } else if (Array.isArray(dbResponse)) {
     state.vehiculos = dbResponse;
     // Refrescar stats del servidor
@@ -1340,10 +1342,7 @@ async function _initQrPolling() {
         const dr = await fetch('/api/data');
         const dd = await dr.json();
         if (dd && dd.vehiculos) {
-          state.vehiculos = dd.vehiculos;
-          state.historial = dd.historial_lavados || [];
-          populateFilters();
-          updateUI();
+          updateVehiculos(dd);
         }
       }
     } catch(e) {}

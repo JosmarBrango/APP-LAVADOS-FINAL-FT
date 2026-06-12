@@ -201,6 +201,7 @@ def index():
 def get_data():
     data = _get_full_db_data()
     if data:
+        data = _recalcular_stats(data)
         return jsonify(data)
     return jsonify({'error': 'Sin datos. Sube un archivo CSV para comenzar.'})
 
