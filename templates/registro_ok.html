@@ -121,6 +121,26 @@
       transition: background .2s;
     }
     .btn-back:hover { background: rgba(88,166,255,.18); }
+    .btn-close {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: none;
+      font-family: var(--sans);
+      transition: all .2s;
+      margin-top: 12px;
+    }
+    .btn-close:hover {
+      background: #F1F5F9;
+      color: var(--text);
+    }
     .logo-bar {
       display: flex; align-items: center; gap: 8px;
       font-size: 12px; color: var(--muted); margin-bottom: 24px;
@@ -172,7 +192,21 @@
     <a href="/registro/{{ placa }}" class="btn-back">
       ↩ Registrar otro lavado para esta placa
     </a>
+    <a href="/" class="btn-close" onclick="tryClose(event)">
+      ✖ Cerrar
+    </a>
   </div>
 
+  <script>
+    function tryClose(e) {
+      // Intentar cerrar la pestaña actual si el navegador lo permite
+      e.preventDefault();
+      window.close();
+      // Si a los 300ms sigue abierta (por bloqueos de seguridad del navegador), redirigir al inicio
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 300);
+    }
+  </script>
 </body>
 </html>

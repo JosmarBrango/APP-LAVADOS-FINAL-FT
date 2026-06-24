@@ -63,7 +63,7 @@ function getMunicipios() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [dataRes, statsRes, tarifasRes] = await Promise.all([
-      fetch('/api/data'),
+      fetch('/api/data?t=' + Date.now()),
       fetch('/api/stats'),
       fetch('/api/config/tarifas')
     ]);
@@ -699,7 +699,7 @@ function renderKanbanBoard(prog, days) {
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text);padding:12px 12px 0;">
         Vehículos sin asignar <span style="font-size:11px;color:var(--muted);float:right">${unassigned.length}</span>
       </div>
-      <div style="overflow-y:auto;flex-grow:1;min-height:100px;padding:0 12px 12px;">
+      <div style="overflow:visible;flex-grow:1;min-height:100px;padding:0 12px 12px;">
         ${unassigned.map(v => renderMiniCard(v, null)).join('')}
       </div>
     </div>
@@ -722,7 +722,7 @@ function renderKanbanBoard(prog, days) {
           <span style="font-size:14px;font-weight:800;color:#fff;background:var(--accent);padding:8px 16px;border-radius:12px;box-shadow:0 4px 12px rgba(37,99,235,.25);letter-spacing:0.02em;text-transform:uppercase;">${dayLabel}</span>
           <span style="font-size:12px;font-weight:700;color:var(--text);background:var(--s2);padding:6px 12px;border-radius:8px;border:1px solid var(--border);">${items.length} / 4</span>
         </div>
-        <div style="overflow-y:auto;flex-grow:1;min-height:100px;padding:0 12px 12px;">
+        <div style="overflow:visible;flex-grow:1;min-height:100px;padding:0 12px 12px;">
           ${items.map(v => renderMiniCard(v, d)).join('')}
         </div>
       </div>
@@ -1325,7 +1325,7 @@ function playDing() {
 async function _initQrPolling() {
   // Capture current timestamp silently (no alert on first load)
   try {
-    const res  = await fetch('/api/last-qr-event');
+    const res  = await fetch('/api/last-qr-event?t=' + Date.now());
     const data = await res.json();
     if (data.event) _lastQrTs = data.event.timestamp;
   } catch(e) {}
@@ -1333,13 +1333,13 @@ async function _initQrPolling() {
   // Poll every 8 seconds
   setInterval(async () => {
     try {
-      const res  = await fetch('/api/last-qr-event');
+      const res  = await fetch('/api/last-qr-event?t=' + Date.now());
       const data = await res.json();
       if (data.event && data.event.timestamp !== _lastQrTs) {
         _lastQrTs = data.event.timestamp;
         _showQrAlert(data.event);
         // Refresh data
-        const dr = await fetch('/api/data');
+        const dr = await fetch('/api/data?t=' + Date.now());
         const dd = await dr.json();
         if (dd && dd.vehiculos) {
           updateVehiculos(dd);
@@ -1452,7 +1452,7 @@ async function saveTarifas(e) {
     if (res.ok) {
       showToast('Tarifas actualizadas ✓');
       state._tarifas = data; // Actualizar tarifas en el estado global
-      const dr = await fetch('/api/data');
+      const dr = await fetch('/api/data?t=' + Date.now());
       const dd = await dr.json();
       if (dd && dd.vehiculos) {
         state.vehiculos = dd.vehiculos;

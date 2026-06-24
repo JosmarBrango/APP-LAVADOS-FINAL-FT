@@ -692,10 +692,11 @@ def registro_qr(placa):
             'tipo_lavado': tipo_lavado,
             'timestamp':  _time.time()
         }
-        database.save_data('last_qr_event', db_data['last_qr_event'])
-
         db_data = _recalcular_stats(db_data)
         _save_full_db_data(db_data)
+
+        # Se guarda el evento al final para evitar race conditions con los clientes que sondean
+        database.save_data('last_qr_event', db_data['last_qr_event'])
 
         try:
             fecha_fmt = dt.datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
