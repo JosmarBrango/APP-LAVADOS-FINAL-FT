@@ -901,7 +901,7 @@ function showQR(placa) {
     height:        220,
     colorDark:     '#0D1117',
     colorLight:    '#FFFFFF',
-    correctLevel:  QRCode.CorrectLevel.H
+    correctLevel:  QRCode.CorrectLevel.M
   });
 
   document.getElementById('modalQR').classList.add('open');
@@ -911,7 +911,20 @@ function _getQRImageSrc() {
   const container = document.getElementById('qrCanvas');
   const c = container.querySelector('canvas');
   const i = container.querySelector('img');
-  return c ? c.toDataURL('image/png') : (i ? i.src : null);
+  
+  if (c) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = c.width + 40;
+    tempCanvas.height = c.height + 40;
+    const ctx = tempCanvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    ctx.drawImage(c, 20, 20);
+    return tempCanvas.toDataURL('image/jpeg', 0.95);
+  } else if (i) {
+    return i.src;
+  }
+  return null;
 }
 
 function downloadCurrentQR() {
@@ -1196,7 +1209,7 @@ function startQRScanner() {
   if (!html5QrcodeScanner) {
     html5QrcodeScanner = new Html5QrcodeScanner(
       "qr-reader",
-      { fps: 10, qrbox: {width: 250, height: 250} },
+      { fps: 15, qrbox: {width: 280, height: 280}, aspectRatio: 1.0 },
       /* verbose= */ false
     );
   }
@@ -1218,17 +1231,21 @@ function stopQRScanner() {
 }
 
 function onScanSuccess(decodedText, decodedResult) {
-  // decodedText should be something like http://127.0.0.1:5001/registro/ABC123
-  const parts = decodedText.split('/');
-  const placa = parts[parts.length - 1].trim().toUpperCase();
-  
-  if (placa && placa.length >= 5 && placa.length <= 7) {
+  if (decodedText.includes('/registro/')) {
+    const parts = decodedText.split('/registro/');
+    const placa = parts[1].split('?')[0].split('#')[0].trim();
+    if (placa) {
+      stopQRScanner();
+      window.location.href = `/registro/${placa}`;
+      return;
+    }
+  } else if (decodedText.length >= 5 && decodedText.length <= 10 && !decodedText.includes('http')) {
+    // Si el QR solo tiene la placa y no la URL completa
     stopQRScanner();
-    // Redirigir directamente a la página de registro QR para que mantenga el origen 'qr_registro' y notifique
-    window.location.href = `/registro/${placa}`;
-  } else {
-    showToast('QR no reconocido o placa inválida', 'err');
+    window.location.href = `/registro/${decodedText}`;
+    return;
   }
+  showToast('QR no reconocido: ' + decodedText, 'err');
 }
 
 function onScanFailure(error) {
@@ -1288,65 +1305,7 @@ function renderTodosLavados() {
   }).join('');
 }
 
-// ─── QR Polling & Alertas en Tiempo Real ──────────────────────────────────
-let _lastQrTs = null;
-
-// Pedir permiso para notificaciones nativas
-if ('Notification' in window) {
-  Notification.requestPermission();
-}
-
-// Función para generar un sonido "ding" usando Web Audio API
-function playDing() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota A5
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
-    
-    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-  } catch (e) {
-    console.log('Audio error:', e);
-  }
-}
-
-async function _initQrPolling() {
-  // Capture current timestamp silently (no alert on first load)
-  try {
-    const res  = await fetch('/api/last-qr-event?t=' + Date.now());
-    const data = await res.json();
-    if (data.event) _lastQrTs = data.event.timestamp;
-  } catch(e) {}
-
-  // Poll every 8 seconds
-  setInterval(async () => {
-    try {
-      const res  = await fetch('/api/last-qr-event?t=' + Date.now());
-      const data = await res.json();
-      if (data.event && data.event.timestamp !== _lastQrTs) {
-        _lastQrTs = data.event.timestamp;
-        _showQrAlert(data.event);
-        // Refresh data
-        const dr = await fetch('/api/data?t=' + Date.now());
-        const dd = await dr.json();
-        if (dd && dd.vehiculos) {
-          updateVehiculos(dd);
-        }
-      }
-    } catch(e) {}
-  }, 8000);
+// --- Alertas QR ahora se manejan vía WebSockets ---
 }
 
 function _showQrAlert(event) {
