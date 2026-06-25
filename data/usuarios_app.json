@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "password": "123",
+    "name": "Administrador Principal",
+    "role": "admin",
+    "active": true
+  },
+  {
+    "username": "lavador1",
+    "password": "lav",
+    "name": "Lavador Prueba",
+    "role": "lavador",
+    "active": true
+  }
+]
