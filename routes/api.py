@@ -34,10 +34,43 @@ def get_data():
     conf = Configuracion.query.filter_by(key='programacion_manual').first()
     prog_manual = json.loads(conf.value) if conf and conf.value else {}
 
+    # Historial de lavados
+    h_list = []
+    lavadores_stats = {}
+    for l in Lavado.query.order_by(Lavado.id.desc()).all():
+        h_list.append({
+            'id': l.id,
+            'placa': l.placa,
+            'fecha': l.fecha,
+            'hora': l.hora,
+            'hora_inicio': l.hora_inicio,
+            'hora_fin': l.hora_fin,
+            'lavador': l.lavador,
+            'tipo_lavado': l.tipo_lavado,
+            'origen': l.origen
+        })
+        # Stats por lavador
+        if l.lavador:
+            lav = l.lavador.strip().upper()
+            if lav not in lavadores_stats:
+                lavadores_stats[lav] = {'total_lavados': 0, 'tiempo_total_minutos': 0, 'tipos': {'General': 0, 'Sencillo': 0, 'Enjuague': 0}}
+            lavadores_stats[lav]['total_lavados'] += 1
+            if l.tipo_lavado in lavadores_stats[lav]['tipos']:
+                lavadores_stats[lav]['tipos'][l.tipo_lavado] += 1
+            else:
+                lavadores_stats[lav]['tipos'][l.tipo_lavado] = 1
+
+    chart_data = {'tiposLavado': {'Sencillo': 0, 'Enjuague': 0}}
+    for l in Lavado.query.all():
+        if l.tipo_lavado in chart_data['tiposLavado']:
+            chart_data['tiposLavado'][l.tipo_lavado] += 1
+
     return jsonify({
         'vehiculos': v_list,
+        'historial_lavados': h_list,
+        'lavadores_stats': lavadores_stats,
         'programacion_manual': prog_manual,
-        'chartData': {'tiposLavado': {'Sencillo': 0, 'Enjuague': 0}} # placeholder
+        'chartData': chart_data
     })
 
 @api_bp.route('/stats')
