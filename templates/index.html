@@ -158,7 +158,7 @@
             <span class="nav-icon">⚙️</span><span class="nav-text">Configuración</span>
           </button>
           {% endif %}
-          <a href="{{ url_for('logout') }}" class="nav-item" data-tooltip="Cerrar sesión" style="text-decoration:none;">
+          <a href="{{ url_for('auth.logout') }}" class="nav-item" data-tooltip="Cerrar sesión" style="text-decoration:none;">
             <span class="nav-icon" style="color:var(--red)">🚪</span><span class="nav-text" style="color:var(--red)">Cerrar sesión</span>
           </a>
         </div>
