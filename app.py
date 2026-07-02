@@ -10,8 +10,16 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from services import process_csv, allowed_file, generar_programacion
 import database
+import logging
 
 app = Flask(__name__)
+
+# Filter out last-qr-event polling from the console logs
+class NoQREventFilter(logging.Filter):
+    def filter(self, record):
+        return 'GET /api/last-qr-event' not in record.getMessage()
+logging.getLogger('werkzeug').addFilter(NoQREventFilter())
+
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_dev_key_12345')
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
