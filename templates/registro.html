@@ -34,7 +34,6 @@
       align-items: center;
       padding: 24px 16px 60px;
     }
-    /* ── Logo bar ── */
     .logo-bar {
       display: flex;
       align-items: center;
@@ -45,7 +44,6 @@
       letter-spacing: .03em;
     }
     .logo-bar .emoji { font-size: 18px; }
-    /* ── Card ── */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -55,7 +53,6 @@
       max-width: 440px;
       box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
     }
-    /* ── Plate badge ── */
     .badge-placa {
       display: inline-flex;
       align-items: center;
@@ -80,7 +77,6 @@
       margin-bottom: 22px;
       border: 1px solid var(--border);
     }
-    /* ── Info grid ── */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -108,13 +104,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    /* ── Divider ── */
     .divider {
       height: 1px;
       background: var(--border);
       margin: 0 0 22px;
     }
-    /* ── Form section ── */
     .section-title {
       font-size: 11px;
       font-weight: 700;
@@ -137,7 +131,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 14px 16px;
-      font-size: 16px; /* 16px prevents iOS auto-zoom */
+      font-size: 16px;
       color: var(--text);
       font-family: var(--sans);
       outline: none;
@@ -152,7 +146,86 @@
       background-size: 12px auto;
     }
     .field input:focus, .field select:focus { border-color: var(--blue); }
-    /* ── Confirm button ── */
+
+    /* ── Múltiples lavadores ── */
+    .lavadores-list { display: flex; flex-direction: column; gap: 8px; }
+    .lavador-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .lavador-row select {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      color: var(--text);
+      font-family: var(--sans);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px top 50%;
+      background-size: 10px auto;
+      transition: border-color .2s;
+    }
+    .lavador-row select:focus { border-color: var(--blue); }
+    .btn-remove-lav {
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: 10px;
+      color: var(--red);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s;
+    }
+    .btn-remove-lav:hover { background: #FEE2E2; }
+    .btn-add-lav {
+      width: 100%;
+      padding: 11px;
+      background: #F0F9FF;
+      border: 1px dashed var(--blue);
+      border-radius: 12px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: background .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .btn-add-lav:hover { background: #E0F2FE; }
+
+    /* ── Tiempos calc ── */
+    .time-row { display: flex; gap: 12px; }
+    .time-row > div { flex: 1; }
+    .calc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #166534;
+      margin-top: 10px;
+    }
+
     .btn-confirm {
       width: 100%;
       background: var(--green);
@@ -175,7 +248,6 @@
     }
     .btn-confirm:active { opacity: .85; transform: scale(.98); }
     .btn-confirm:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-    /* ── Alert ── */
     .alert {
       padding: 14px 16px;
       border-radius: 12px;
@@ -184,15 +256,9 @@
       line-height: 1.5;
     }
     .alert.err { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25); color: #f85149; }
-    /* ── Lavados counter ── */
-    .lav-counter {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    .lav-counter { display: flex; align-items: center; gap: 6px; }
     .lav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
     .lav-dot.empty { background: var(--border); }
-    /* ── Footer ── */
     .footer-note {
       font-size: 11px;
       color: var(--muted);
@@ -270,33 +336,61 @@
           <option value="Enjuague">Solo Enjuague</option>
         </select>
       </div>
+
+      <!-- Múltiples lavadores -->
       <div class="field">
-        <label>Lavador</label>
-        <select name="lavador" required>
-          <option value="" disabled selected>Selecciona una persona...</option>
-          <option value="ELIFELE SIMANCA">ELIFELE SIMANCA</option>
-          <option value="HADER CORREA">HADER CORREA</option>
-          <option value="LUIS GOMEZ">LUIS GOMEZ</option>
-          <option value="JAIDER MORENO">JAIDER MORENO</option>
-          <option value="MOISES GOMEZ">MOISES GOMEZ</option>
-          <option value="JORGE ARROYO">JORGE ARROYO</option>
-        </select>
+        <label>Lavadores <span style="color:var(--muted);font-size:11px;">(selecciona todos los que participaron)</span></label>
+        <div class="lavadores-list" id="lavadoresList">
+          <div class="lavador-row">
+            <select name="lavadores" required>
+              <option value="" disabled selected>Selecciona un lavador...</option>
+              {% for lav in lavadores_sistema %}
+              <option value="{{ lav }}">{{ lav }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <button type="button" class="btn-add-lav" id="btnAddLavador" onclick="addLavadorRow()">
+          <span>＋</span> Agregar otro lavador
+        </button>
       </div>
+
       <div class="field">
         <label>Fecha del lavado</label>
-        <input type="date" name="fecha" id="inFecha" required>
+        <input type="date" id="inFechaVisible" disabled>
+        <input type="hidden" name="fecha" id="inFecha" required>
       </div>
-      <div class="field" style="display:flex;gap:12px;">
-        <div style="flex:1;">
-          <label>Hora Inicio</label>
-          <input type="time" name="hora_inicio" id="inHora" required>
+
+      <div class="field">
+        <label>Municipio donde se encontraba</label>
+        <input type="text" name="municipio" id="inMunicipio" placeholder="Ej: Apartadó, Turbo, Necoclí..." value="{{ vehiculo.mun if vehiculo.mun != 'N/D' else '' }}">
+      </div>
+
+      <div class="section-title" style="margin-top:8px;">⏱️ Control de tiempos</div>
+
+      <div class="field">
+        <label>Hora de llegada al lavadero</label>
+        <input type="time" name="hora_llegada" id="inHoraLlegada" required>
+      </div>
+      <div class="time-row">
+        <div class="field">
+          <label>Hora inicio lavado</label>
+          <input type="time" name="hora_inicio" id="inHoraInicio">
         </div>
-        <div style="flex:1;">
-          <label>Hora Fin</label>
-          <input type="time" name="hora_fin" id="inHoraFin" required>
+        <div class="field">
+          <label>Hora fin lavado</label>
+          <input type="time" name="hora_fin" id="inHoraFin">
         </div>
       </div>
-      <button type="submit" class="btn-confirm" id="btnConfirm">
+
+      <!-- Badge de tiempos calculados en tiempo real -->
+      <div id="calcBadges" style="display:none;">
+        <div class="calc-badge" id="badgeEspera">⏳ Espera: <strong id="valEspera">—</strong></div>
+        &nbsp;
+        <div class="calc-badge" id="badgeLavado">🚿 Lavado: <strong id="valLavado">—</strong></div>
+      </div>
+
+      <button type="submit" class="btn-confirm" id="btnConfirm" style="margin-top:20px;">
         <span style="font-size:20px">✓</span>
         Confirmar Lavado
       </button>
@@ -307,77 +401,120 @@
   {% endif %}
 
   <script>
-    // Registro de Service Worker para PWA
+    // Lavadores disponibles en el sistema (inyectados desde Python)
+    const LAVADORES_SISTEMA = {{ lavadores_sistema | tojson }};
+
+    function addLavadorRow(selectedValue) {
+      const list = document.getElementById('lavadoresList');
+      const row = document.createElement('div');
+      row.className = 'lavador-row';
+
+      const sel = document.createElement('select');
+      sel.name = 'lavadores';
+      sel.innerHTML = `<option value="" disabled ${selectedValue ? '' : 'selected'}>Selecciona un lavador...</option>`;
+      LAVADORES_SISTEMA.forEach(lav => {
+        const opt = document.createElement('option');
+        opt.value = lav;
+        opt.textContent = lav;
+        if (lav === selectedValue) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-remove-lav';
+      btn.innerHTML = '✕';
+      btn.onclick = () => row.remove();
+
+      row.appendChild(sel);
+      row.appendChild(btn);
+      list.appendChild(row);
+    }
+
+    // Calcular tiempos en tiempo real
+    function calcDiff(h1, h2) {
+      if (!h1 || !h2) return null;
+      const [h1h, h1m] = h1.split(':').map(Number);
+      const [h2h, h2m] = h2.split(':').map(Number);
+      let diff = (h2h * 60 + h2m) - (h1h * 60 + h1m);
+      if (diff < 0) diff += 24 * 60;
+      return diff;
+    }
+    function fmtMins(m) {
+      if (m === null || m < 0) return '—';
+      if (m < 60) return `${m} min`;
+      return `${Math.floor(m/60)}h ${m%60}min`;
+    }
+    function updateCalc() {
+      const hl = document.getElementById('inHoraLlegada')?.value;
+      const hi = document.getElementById('inHoraInicio')?.value;
+      const hf = document.getElementById('inHoraFin')?.value;
+      const espera = calcDiff(hl, hi);
+      const lavado = calcDiff(hi, hf);
+      const show = espera !== null || lavado !== null;
+      document.getElementById('calcBadges').style.display = show ? 'flex' : 'none';
+      document.getElementById('valEspera').textContent = fmtMins(espera);
+      document.getElementById('valLavado').textContent = fmtMins(lavado);
+    }
+    ['inHoraLlegada', 'inHoraInicio', 'inHoraFin'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', updateCalc);
+    });
+
+    // Service Worker para PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
       });
     }
 
-    // Lógica Offline y Sincronización
-    function syncOfflineQueue() {
-      if (!navigator.onLine) return;
-      let queue = JSON.parse(localStorage.getItem('offlineLavados') || '[]');
-      if (queue.length === 0) return;
-      
-      let banner = document.createElement('div');
-      banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:var(--blue);color:white;text-align:center;padding:12px;z-index:9999;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.1);";
-      banner.innerText = `Sincronizando ${queue.length} registro(s) guardado(s) sin conexión...`;
-      document.body.appendChild(banner);
-      
-      Promise.all(queue.map(data => {
-        let fd = new URLSearchParams();
-        for(let k in data) if(k !== 'placa') fd.append(k, data[k]);
-        return fetch(`/registro/${data.placa}`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-          body: fd.toString()
-        });
-      })).then(() => {
-        localStorage.removeItem('offlineLavados');
-        banner.style.background = 'var(--green)';
-        banner.innerText = '¡Todos los registros sincronizados correctamente! ✅';
-        setTimeout(() => banner.remove(), 4000);
-      }).catch(e => {
-        banner.style.background = 'var(--red)';
-        banner.innerText = 'Error al sincronizar. Se reintentará más tarde.';
-        setTimeout(() => banner.remove(), 4000);
-      });
-    }
-
-    window.addEventListener('online', syncOfflineQueue);
-    window.addEventListener('load', syncOfflineQueue);
-
-    // Pre-fill date and time with current local values
-    (function() {
-      const now = new Date();
+    // Pre-fill date — BLOQUEADO al día de hoy
+    const fechaVis = document.getElementById('inFechaVisible');
+    const fechaHid = document.getElementById('inFecha');
+    const horaLleg = document.getElementById('inHoraLlegada');
+    if (fechaVis && fechaHid) {
       const pad = n => String(n).padStart(2, '0');
+      const now = new Date();
       const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
       const time  = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      const fechaEl = document.getElementById('inFecha');
-      const horaEl  = document.getElementById('inHora');
-      const horaFinEl  = document.getElementById('inHoraFin');
-      if (fechaEl && !fechaEl.value) fechaEl.value = today;
-      if (horaEl && !horaEl.value)  horaEl.value  = time;
-      if (horaFinEl && !horaFinEl.value) horaFinEl.value = time;
+      fechaVis.value    = today;
+      fechaHid.value    = today;
+      fechaVis.style.background  = '#F1F5F9';
+      fechaVis.style.cursor      = 'default';
+      fechaVis.title = 'La fecha se establece automáticamente al día de hoy';
+      if (horaLleg && !horaLleg.value) horaLleg.value = time;
+    }
 
-      document.getElementById('formReg')?.addEventListener('submit', function(e) {
+    document.getElementById('formReg')?.addEventListener('submit', function(e) {
+        // Validar que al menos 1 lavador esté seleccionado
+        const lavSelects = document.querySelectorAll('select[name="lavadores"]');
+        const alguno = [...lavSelects].some(s => s.value);
+        if (!alguno) {
+          e.preventDefault();
+          alert('Debes seleccionar al menos un lavador.');
+          return;
+        }
+
         // Intercepción Offline
         if (!navigator.onLine) {
           e.preventDefault();
           const formData = new FormData(this);
-          const data = Object.fromEntries(formData.entries());
-          data.placa = "{{ vehiculo.placa }}"; // Inyectado por Jinja
-          
+          const data = {};
+          for (let [k, v] of formData.entries()) {
+            if (k === 'lavadores') {
+              data.lavadores = data.lavadores ? data.lavadores + '||' + v : v;
+            } else {
+              data[k] = v;
+            }
+          }
+          data.placa = "{{ vehiculo.placa }}";
           let queue = JSON.parse(localStorage.getItem('offlineLavados') || '[]');
           queue.push(data);
           localStorage.setItem('offlineLavados', JSON.stringify(queue));
-          
           document.body.innerHTML = `
             <div style="padding:40px 20px;text-align:center;font-family:sans-serif;height:100dvh;display:flex;flex-direction:column;justify-content:center;align-items:center;">
               <div style="font-size:60px;margin-bottom:20px;">📡❌</div>
               <h2 style="color:#0F172A;margin-bottom:10px;">¡Guardado sin conexión!</h2>
-              <p style="color:#64748B;font-size:15px;line-height:1.5;">El registro se guardó de forma segura en tu celular porque no tienes internet.</p>
+              <p style="color:#64748B;font-size:15px;line-height:1.5;">El registro se guardó en tu celular porque no tienes internet.</p>
               <p style="color:#10B981;font-size:15px;line-height:1.5;margin-top:10px;font-weight:600;">Se subirá automáticamente en cuanto recuperes la señal.</p>
               <button onclick="location.reload()" style="margin-top:30px;padding:16px 32px;background:#0EA5E9;color:white;border-radius:14px;border:none;font-size:16px;font-weight:700;width:100%;">Volver</button>
             </div>
@@ -389,7 +526,6 @@
         btn.innerHTML = '<span>⏳</span> Registrando…';
         setTimeout(() => { btn.disabled = true; }, 0);
       });
-    })();
   </script>
 </body>
 </html>

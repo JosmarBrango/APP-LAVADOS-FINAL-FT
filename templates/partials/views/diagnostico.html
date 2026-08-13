@@ -1,0 +1,65 @@
+<!-- ─── VISTA: Diagnóstico ─────────────────────────────── -->
+<div id="view-diagnostico" class="section active">
+  <!-- Selector de mes -->
+  <div class="mes-filter-wrapper" style="align-items: center; display: flex; gap: 12px; padding: 12px; background: white; border-radius: 999px; border: 1.5px solid var(--border); margin-bottom: 24px; max-width: max-content;">
+    <div class="mes-filter-label" style="font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px;">
+      <span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right: 4px;">filter_list</span>
+      Período
+    </div>
+    <select id="mesSelect" onchange="seleccionarMes(this.value)" style="padding: 10px 40px 10px 18px; border-radius: 999px; font-family: var(--sans); font-size: 14px; outline: none; cursor: pointer; font-weight: 600; appearance: none; -webkit-appearance: none; background-color: #3B82F6; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E'), linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%); background-repeat: no-repeat; background-position: right 14px center, 0 0; background-size: 12px 12px, 100% 100%; color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);">
+      <option style="background-color: white; color: #1e293b; font-weight: 500;" value="TOTAL">Total histórico</option>
+      <!-- Se llenan dinámicamente -->
+    </select>
+  </div>
+
+  <div style="background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; color: #1E3A8A; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+    <span class="material-symbols-outlined" style="font-size: 20px; color: #3B82F6;">info</span>
+    <div><strong>Nota:</strong> Las métricas y la tabla de esta pestaña contabilizan exclusivamente los lavados de tipo <strong>General</strong>.</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi info">
+      <div class="kpi-lbl" id="kpiMesLabel">Mes actual</div>
+      <div class="kpi-val" id="kpiRealizados">0</div>
+      <div class="kpi-s" id="kpiMeta">de 0 esperados</div>
+      <div class="kpi-ico"><span class="material-symbols-outlined" style="font-size: 32px;">local_car_wash</span></div>
+    </div>
+    <div class="kpi danger" id="kpiCardPendientes">
+      <div class="kpi-lbl" id="kpiPendientesLbl">Pendientes este mes</div>
+      <div class="kpi-val" id="kpiDeficit">0</div>
+      <div class="kpi-s">lavados por completar</div>
+      <div class="kpi-ico"><span class="material-symbols-outlined" style="font-size: 32px;">warning</span></div>
+    </div>
+    <div class="kpi info">
+      <div class="kpi-lbl" id="kpiCumplimientoLbl">Cumplimiento del mes</div>
+      <div class="kpi-val" style="font-size:28px" id="kpiCumplimiento">0%</div>
+      <div class="kpi-s" id="kpiCumplimientoSub">0 de 0 requeridos</div>
+      <div class="kpi-ico"><span class="material-symbols-outlined" style="font-size: 32px;">bar_chart</span></div>
+    </div>
+    <div class="kpi info">
+      <div class="kpi-lbl" id="kpiCard4Lbl">Próximo mes</div>
+      <div class="kpi-val" id="kpiProximoMes">0</div>
+      <div class="kpi-s" id="kpiProximoMesSub">lavados a programar</div>
+      <div class="kpi-ico"><span class="material-symbols-outlined" style="font-size: 32px;">calendar_month</span></div>
+    </div>
+  </div>
+  <div class="sec-hdr">
+    <div class="sec-title">Resumen por municipio</div>
+    <div class="sec-line"></div>
+    <div class="sec-badge" id="diagTotalVeh">0 vehículos</div>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Municipio</th>
+          <th>Vehículos</th>
+          <th>Lav. generales</th>
+          <th>Sin lavado</th>
+          <th>Cumplimiento</th>
+        </tr>
+      </thead>
+      <tbody id="diagBody"></tbody>
+    </table>
+  </div>
+</div>

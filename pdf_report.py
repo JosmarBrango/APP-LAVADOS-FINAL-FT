@@ -13,16 +13,17 @@ import datetime
 from collections import defaultdict
 from fpdf import FPDF, XPos, YPos
 
-# ── Paleta de colores (monocromática + un acento) ──────────────────────────────
+# ── Paleta de colores (monocromática, estilo planilla) ────────────────────────
 C_BLACK  = (15,  23,  42)   # Título, texto fuerte
 C_DARK   = (51,  65,  85)   # Texto secundario
 C_MUTED  = (100, 116, 139)  # Texto apagado, notas
 C_LIGHT  = (241, 245, 249)  # Fondo alternado zebra
 C_WHITE  = (255, 255, 255)
-C_RULE   = (203, 213, 225)  # Líneas divisoras
-C_ACCENT = (14,  165, 233)  # Acento azul (solo para valores importantes)
+C_RULE   = (180, 180, 180)  # Líneas de tabla (gris, como en planilla)
+C_ACCENT = (14,  165, 233)  # Solo para encabezados de sección (pequeño)
 C_RED    = (220, 38,  38)   # Solo para alertas críticas
 C_GREEN  = (22,  163, 74)   # Solo para cumplimiento OK
+C_HEADER_BG = (220, 220, 220)  # Fondo encabezado tabla (igual que DiarioReport)
 
 # ── Sanitizacion de texto para Helvetica (latin-1) ────────────────────────────
 _CHAR_MAP = str.maketrans({
@@ -46,49 +47,58 @@ def _t(text) -> str:
 
 
 class CleanReport(FPDF):
-    """Reporte limpio con cabecera simple y pie de página discreto."""
+    """Reporte limpio con cabecera estilo planilla FT-OP-15."""
 
     def __init__(self, titulo: str, subtitulo: str, responsable: str = ''):
         super().__init__(orientation='L', unit='mm', format='A4')
         self.titulo      = _t(titulo)
         self.subtitulo   = _t(subtitulo)
         self.responsable = _t(responsable)
-        self.set_margins(18, 18, 18)
-        self.set_auto_page_break(auto=True, margin=16)
+        self.set_margins(8, 8, 8)
+        self.set_auto_page_break(auto=True, margin=14)
 
     def header(self):
-        # Línea superior de acento
-        self.set_fill_color(*C_ACCENT)
-        self.rect(0, 0, 297, 3, 'F')
+        self.set_draw_color(*C_BLACK)
+        self.set_line_width(0.4)
+        y0 = 8
 
-        self.set_xy(18, 8)
-        self.set_font('Helvetica', 'B', 15)
+        # Logo box
+        self.rect(8, y0, 38, 16)
+        self.set_font('Helvetica', 'B', 11)
         self.set_text_color(*C_BLACK)
-        self.cell(0, 7, self.titulo, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.set_xy(8, y0 + 4)
+        self.cell(38, 8, 'futuraseo', align='C')
 
-        self.set_xy(18, 16)
-        self.set_font('Helvetica', '', 9)
-        self.set_text_color(*C_MUTED)
+        # Caja del titulo principal
+        self.rect(46, y0, 243, 16)
+        self.set_font('Helvetica', 'B', 12)
+        self.set_xy(46, y0 + 2)
+        self.cell(243, 7, self.titulo, align='C')
+        self.set_font('Helvetica', '', 8)
+        self.set_text_color(*C_DARK)
+        self.set_xy(46, y0 + 9)
+        self.cell(243, 5, self.subtitulo, align='C')
+
+        # Fila 2: fecha + pagina
+        y1 = y0 + 16
+        self.rect(8, y1, 281, 7)
+        self.set_font('Helvetica', 'B', 8)
+        self.set_text_color(*C_BLACK)
+        self.set_xy(10, y1 + 1.5)
         fecha_str = datetime.datetime.now().strftime('%d/%m/%Y  %H:%M')
-        self.cell(0, 5, f'{self.subtitulo}   |   Generado: {fecha_str}', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.cell(180, 4, f'GENERADO: {fecha_str}', align='L')
+        self.set_xy(240, y1 + 1.5)
+        self.cell(47, 4, f'Pag. {self.page_no()}', align='C')
 
-        # Línea divisora
-        self.set_draw_color(*C_RULE)
-        self.set_line_width(0.3)
-        self.line(18, 23, 279, 23)
-        self.set_y(28)
+        self.set_y(y0 + 16 + 7 + 3)
 
     def footer(self):
-        self.set_y(-12)
-        self.set_draw_color(*C_RULE)
-        self.set_line_width(0.3)
-        self.line(18, self.get_y(), 279, self.get_y())
-        self.set_font('Helvetica', '', 7)
+        self.set_y(-10)
+        self.set_font('Helvetica', '', 6.5)
         self.set_text_color(*C_MUTED)
         resp = f'{self.responsable}   |   ' if self.responsable else ''
-        self.set_x(18)
         footer_text = f'{resp}Flota Uraba  -  Sistema de Gestion de Lavados   |   Pag. {self.page_no()}'
-        self.cell(0, 6, _t(footer_text), align='C')
+        self.cell(0, 5, _t(footer_text), align='C')
 
 
 # ── Función principal ──────────────────────────────────────────────────────────
@@ -106,6 +116,8 @@ def generar_pdf(db_data: dict, programacion: list, start_date: str, end_date: st
         return _reporte_lavadores(historial, vehiculos, responsable, db_data.get('lavadores_stats', {}))
     elif tipo_reporte == 'flota':
         return _reporte_flota(vehiculos, stats, responsable)
+    elif tipo_reporte == 'diarios':
+        return _reporte_lavados_diarios(historial, vehiculos, start_date, end_date, responsable)
     else:
         return _reporte_diagnostico(stats, vehiculos, historial, start_date, responsable)
 
@@ -115,24 +127,35 @@ def generar_pdf(db_data: dict, programacion: list, start_date: str, end_date: st
 # ─────────────────────────────────────────────────────────────────────────────
 def _reporte_diagnostico(stats, vehiculos, historial, fecha_corte, responsable):
     pdf = CleanReport(
-        titulo='Diagnostico General de Flota',
+        titulo='DIAGNOSTICO GENERAL DE FLOTA',
         subtitulo=f'Corte al {fecha_corte}',
         responsable=responsable
     )
     pdf.set_compression(True)
     pdf.add_page()
 
-    # KPIs en una fila compacta
-    kpis = [
-        ('Vehiculos totales',    str(stats.get('total_veh', 0)),     C_ACCENT),
-        ('Lavados realizados',   str(stats.get('total_gen', 0)),     C_GREEN),
-        ('Meta esperada',        str(stats.get('meta', 0)),          C_DARK),
-        ('Deficit acumulado',    str(stats.get('deficit', 0)),       C_RED),
-        ('Sin ningun lavado',    str(stats.get('sin_gen', 0)),       C_RED),
-        ('Cumplimiento',         f"{stats.get('pct_cum', 0)}%",      C_GREEN if float(stats.get('pct_cum', 0)) >= 80 else C_RED),
+    # Resumen compacto en texto (sin tarjetas de colores)
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.4)
+    y_res = pdf.get_y()
+    pdf.rect(8, y_res, 281, 10)
+    resumen_items = [
+        f"Vehiculos: {stats.get('total_veh', 0)}",
+        f"Lavados realizados: {stats.get('total_gen', 0)}",
+        f"Meta: {stats.get('meta', 0)}",
+        f"Deficit: {stats.get('deficit', 0)}",
+        f"Sin lavado: {stats.get('sin_gen', 0)}",
+        f"Cumplimiento: {stats.get('pct_cum', 0)}%",
     ]
-    _draw_kpi_strip(pdf, kpis)
-    pdf.ln(6)
+    col_w = 281 / len(resumen_items)
+    x = 8
+    for item in resumen_items:
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_text_color(*C_BLACK)
+        pdf.set_xy(x + 1, y_res + 3)
+        pdf.cell(col_w - 2, 5, _t(item), align='C')
+        x += col_w
+    pdf.set_y(y_res + 10 + 4)
 
     # Tabla por municipio
     _section(pdf, 'Cumplimiento por Municipio')
@@ -144,28 +167,27 @@ def _reporte_diagnostico(stats, vehiculos, historial, fecha_corte, responsable):
             grupos[mun]['veh'] += 1
             grupos[mun]['lav'] += v.get('lavGen', 0)
 
-    cols = [80, 30, 30, 30, 50]
+    cols = [100, 45, 45, 45, 46]
     hdrs = ['Municipio', 'Vehiculos', 'Lavados', 'Meta', 'Cumplimiento']
     _table_header(pdf, hdrs, cols)
     for idx, (mun, g) in enumerate(sorted(grupos.items())):
         meta = g['veh'] * n_meses
         pct  = (g['lav'] / meta * 100) if meta > 0 else 0
-        color_pct = C_GREEN if pct >= 80 else C_RED
         bg = C_LIGHT if idx % 2 else C_WHITE
         _table_row(pdf, [_t(mun), str(g['veh']), str(g['lav']), str(meta), f'{pct:.1f}%'],
-                   cols, bg=bg, last_color=color_pct)
-    pdf.ln(8)
+                   cols, bg=bg)
+    pdf.ln(5)
 
-    # Vehículos sin lavado
+    # Vehiculos sin lavado
     pendientes = sorted([v for v in vehiculos if v.get('lavGen', 0) == 0],
                         key=lambda x: (x.get('mun', ''), x.get('placa', '')))
     _section(pdf, f'Vehiculos sin Lavado General ({len(pendientes)} unidades)')
     if not pendientes:
         pdf.set_font('Helvetica', 'I', 9)
-        pdf.set_text_color(*C_GREEN)
+        pdf.set_text_color(*C_DARK)
         pdf.cell(0, 6, 'Todos los vehiculos tienen al menos un lavado registrado.', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     else:
-        cols2 = [35, 55, 55, 40, 35]
+        cols2 = [45, 65, 72, 50, 49]
         hdrs2 = ['Placa', 'Municipio', 'Supervisor', 'Ruta', 'Ultimo Lavado']
         _table_header(pdf, hdrs2, cols2)
         for idx, v in enumerate(pendientes):
@@ -176,8 +198,9 @@ def _reporte_diagnostico(stats, vehiculos, historial, fecha_corte, responsable):
                 _t(v.get('sup', 'N/D')),
                 _t(v.get('ruta', 'N/D')),
                 _t(v.get('ultimo', 'NUNCA'))
-            ], cols2, bg=bg, first_color=C_RED)
+            ], cols2, bg=bg)
 
+    _firma_coordinador(pdf)
     return bytes(pdf.output())
 
 
@@ -186,7 +209,7 @@ def _reporte_diagnostico(stats, vehiculos, historial, fecha_corte, responsable):
 # ─────────────────────────────────────────────────────────────────────────────
 def _reporte_programacion(programacion, vehiculos, start_date, end_date, responsable):
     pdf = CleanReport(
-        titulo='Propuesta de Programacion de Lavados',
+        titulo='PROPUESTA DE PROGRAMACION DE LAVADOS',
         subtitulo=f'Del {start_date} al {end_date}',
         responsable=responsable
     )
@@ -196,14 +219,19 @@ def _reporte_programacion(programacion, vehiculos, start_date, end_date, respons
     asignados   = [v for v in programacion if v.get('diaAsignado')]
     sin_asignar = [v for v in programacion if not v.get('diaAsignado')]
 
-    pdf.set_font('Helvetica', '', 9)
-    pdf.set_text_color(*C_MUTED)
-    pdf.cell(0, 5, f'Total programados: {len(asignados)}   |   Sin asignar: {len(sin_asignar)}',
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
+    # Resumen compacto en una sola fila con borde
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.4)
+    y_res = pdf.get_y()
+    pdf.rect(8, y_res, 281, 8)
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_text_color(*C_BLACK)
+    pdf.set_xy(10, y_res + 2)
+    pdf.cell(0, 4, f'Total programados: {len(asignados)}   |   Sin asignar: {len(sin_asignar)}', align='L')
+    pdf.set_y(y_res + 8 + 4)
 
     _section(pdf, 'Vehiculos Programados')
-    cols = [28, 50, 50, 28, 25, 25, 55]
+    cols = [30, 58, 55, 25, 25, 28, 60]
     hdrs = ['Placa', 'Municipio', 'Supervisor', 'Dia', 'Llegada', 'Fin Est.', 'Estado']
     _table_header(pdf, hdrs, cols)
 
@@ -219,12 +247,12 @@ def _reporte_programacion(programacion, vehiculos, start_date, end_date, respons
             _t(v.get('horaMejorDia', '-')),
             _t(v.get('finEstimado3h', '-')),
             _t(turno.get('label', '-'))
-        ], cols, bg=bg, first_color=C_ACCENT)
+        ], cols, bg=bg)
 
     if sin_asignar:
-        pdf.ln(8)
-        _section(pdf, f'Sin Asignar ({len(sin_asignar)} vehiculos — sin historial de llegada)')
-        cols2 = [35, 65, 65, 96]
+        pdf.ln(5)
+        _section(pdf, f'Sin Asignar ({len(sin_asignar)} vehiculos - sin historial de llegada)')
+        cols2 = [40, 75, 75, 91]
         hdrs2 = ['Placa', 'Municipio', 'Supervisor', 'Motivo']
         _table_header(pdf, hdrs2, cols2)
         for idx, v in enumerate(sin_asignar):
@@ -234,91 +262,92 @@ def _reporte_programacion(programacion, vehiculos, start_date, end_date, respons
                 _t(v.get('mun', 'N/D')),
                 _t(v.get('sup', 'N/D')),
                 _t(v.get('razon', 'Sin registros de llegada'))
-            ], cols2, bg=bg, first_color=C_MUTED)
+            ], cols2, bg=bg)
 
+    _firma_coordinador(pdf)
     return bytes(pdf.output())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# REPORTE 3: LAVADORES
+# REPORTE 3: FT-OP-15 (Antes Lavadores)
 # ─────────────────────────────────────────────────────────────────────────────
 def _reporte_lavadores(historial, vehiculos, responsable, lavadores_stats=None):
     if lavadores_stats is None: lavadores_stats = {}
     placa_to_mun = {v['placa']: v.get('mun', 'N/D') for v in vehiculos}
+    placa_to_tipo = {v['placa']: v.get('tipo', 'N/D') for v in vehiculos}
 
     pdf = CleanReport(
-        titulo='Reporte de Lavadores — Detalle de Servicios',
-        subtitulo=f'Corte al {datetime.datetime.now().strftime("%d/%m/%Y")}',
+        titulo='CONTROL DE LAVADOS - DETALLE POR ESPECIALISTA',
+        subtitulo=f'Generado el {datetime.datetime.now().strftime("%d/%m/%Y %H:%M")}',
         responsable=responsable
     )
     pdf.set_compression(True)
     pdf.add_page()
 
-    # Agrupar por lavador
-    por_lavador = defaultdict(list)
-    for h in historial:
-        lav = _t(h.get('lavador', 'Sin asignar')).strip() or 'Sin asignar'
-        por_lavador[lav].append(h)
-
-    if not por_lavador:
+    if not historial:
         pdf.set_font('Helvetica', 'I', 10)
-        pdf.set_text_color(*C_MUTED)
+        pdf.set_text_color(*C_DARK)
         pdf.cell(0, 8, 'No hay registros de lavados en el historial.', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         return bytes(pdf.output())
 
-    cols = [30, 45, 28, 22, 22, 35, 79]
-    hdrs = ['Placa', 'Municipio', 'Fecha', 'Inicio', 'Fin', 'Tipo', 'Origen']
+    _section(pdf, 'Registro General de Lavados')
+    cols = [20, 28, 22, 17, 17, 17, 14, 16, 25, 25, 80]
+    hdrs = ['Placa', 'Municipio', 'Fecha', 'Llegada', 'Inicio', 'Fin', 'Esp.', 'Dur.', 'Tipo Veh.', 'Tipo Lav.', 'Lavadores']
 
-    for lavador, lavados in sorted(por_lavador.items()):
-        _section(pdf, f'{lavador}   ({len(lavados)} servicio(s))')
-        _table_header(pdf, hdrs, cols)
-        for idx, h in enumerate(lavados):
-            bg = C_LIGHT if idx % 2 else C_WHITE
-            mun = placa_to_mun.get(h.get('placa', ''), 'N/D')
-            origen_map = {
-                'qr_registro':     'QR (campo)',
-                'dashboard_manual':'Manual (app)',
-                'dashboard_sumar': 'Botón +'
-            }
-            _table_row(pdf, [
-                _t(h.get('placa', '')),
-                _t(mun),
-                _t(h.get('fecha', '')),
-                _t(h.get('hora_inicio', h.get('hora', '-'))),
-                _t(h.get('hora_fin', '-')),
-                _t(h.get('tipo_lavado', 'General')),
-                _t(origen_map.get(h.get('origen', ''), h.get('origen', '-')))
-            ], cols, bg=bg, first_color=C_ACCENT)
-        pdf.ln(6)
+    _table_header(pdf, hdrs, cols)
 
-    # Agregar resumen de nómina si hay datos
-    if lavadores_stats:
-        pdf.add_page()
-        _section(pdf, 'Resumen Estimado de Nómina')
-        cols_nomina = [60, 40, 40, 40, 60]
-        hdrs_nomina = ['Lavador', 'Generales', 'Sencillos', 'Enjuagues', 'Total Estimado']
-        _table_header(pdf, hdrs_nomina, cols_nomina)
-        
-        total_empresa = 0
-        for idx, (lavador, data) in enumerate(sorted(lavadores_stats.items())):
-            tipos = data.get('tipos', {})
-            pago = data.get('pago_estimado', 0)
-            total_empresa += pago
-            
-            bg = C_LIGHT if idx % 2 else C_WHITE
-            _table_row(pdf, [
-                _t(lavador),
-                str(tipos.get('General', 0)),
-                str(tipos.get('Sencillo', 0)),
-                str(tipos.get('Enjuague', 0)),
-                f"${pago:,.0f}"
-            ], cols_nomina, bg=bg, first_color=C_DARK, last_color=C_GREEN)
-            
-        pdf.ln(6)
-        pdf.set_font('Helvetica', 'B', 10)
-        pdf.set_text_color(*C_GREEN)
-        pdf.cell(0, 8, f'Total de Nomina Estimada: ${total_empresa:,.0f}', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    totales_tipo_vehiculo = defaultdict(int)
 
+    for idx, h in enumerate(historial):
+        bg = C_LIGHT if idx % 2 else C_WHITE
+        mun = placa_to_mun.get(h.get('placa', ''), 'N/D')
+        t_veh = placa_to_tipo.get(h.get('placa', ''), 'N/D')
+        totales_tipo_vehiculo[t_veh] += 1
+        lavs = h.get('lavadores')
+        if not lavs:
+            lavs = [h.get('lavador', 'Sin asignar').strip() or 'Sin asignar']
+        lavs_str = ', '.join([_t(l).strip() for l in lavs])
+        _table_row(pdf, [
+            _t(h.get('placa', '')),
+            _t(h.get('municipio', mun)),
+            _t(h.get('fecha', '')),
+            _t(h.get('hora_llegada', '-')),
+            _t(h.get('hora_inicio', h.get('hora', '-'))),
+            _t(h.get('hora_fin', '-')),
+            f"{h.get('tiempo_espera', '-')}m",
+            f"{h.get('tiempo_lavado', '-')}m",
+            _t(t_veh),
+            _t(h.get('tipo_lavado', 'General')),
+            lavs_str
+        ], cols, bg=bg)
+
+    pdf.ln(5)
+
+    # Totales por tipo de vehiculo
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_text_color(*C_BLACK)
+    pdf.cell(0, 6, 'Totales por Tipo de Vehiculo:', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font('Helvetica', '', 9)
+    for t_veh, qty in sorted(totales_tipo_vehiculo.items()):
+        pdf.cell(10, 6, '', new_x=XPos.RIGHT)
+        pdf.cell(60, 6, f'{t_veh}: {qty}', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.ln(3)
+
+    # Totales por Lavador
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_text_color(*C_BLACK)
+    pdf.cell(0, 6, 'Totales por Lavador (Generales / Sencillos / Enjuagues):', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font('Helvetica', '', 9)
+    for lavador, data in sorted(lavadores_stats.items()):
+        tipos = data.get('tipos', {})
+        t_gen = f"{tipos.get('General', 0):g}"
+        t_sen = f"{tipos.get('Sencillo', 0):g}"
+        t_enj = f"{tipos.get('Enjuague', 0):g}"
+        pdf.cell(10, 6, '', new_x=XPos.RIGHT)
+        pdf.cell(0, 6, f'{_t(lavador)}: {t_gen} Generales, {t_sen} Sencillos, {t_enj} Enjuagues', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    _firma_coordinador(pdf)
     return bytes(pdf.output())
 
 
@@ -327,33 +356,43 @@ def _reporte_lavadores(historial, vehiculos, responsable, lavadores_stats=None):
 # ─────────────────────────────────────────────────────────────────────────────
 def _reporte_flota(vehiculos, stats, responsable):
     pdf = CleanReport(
-        titulo='Inventario de Flota',
+        titulo='INVENTARIO DE FLOTA',
         subtitulo=f'Corte al {datetime.datetime.now().strftime("%d/%m/%Y")}   |   {len(vehiculos)} vehiculos registrados',
         responsable=responsable
     )
     pdf.set_compression(True)
     pdf.add_page()
 
-    # Resumen rápido
-    kpis = [
-        ('Total vehiculos',   str(stats.get('total_veh', len(vehiculos))), C_ACCENT),
-        ('Lavados generales', str(stats.get('total_gen', 0)),              C_GREEN),
-        ('Sin ningun lavado', str(stats.get('sin_gen', 0)),                C_RED),
-        ('Cumplimiento',      f"{stats.get('pct_cum', 0)}%",               C_GREEN if float(stats.get('pct_cum', 0)) >= 80 else C_RED),
+    # Resumen compacto en una fila con borde
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.4)
+    y_res = pdf.get_y()
+    pdf.rect(8, y_res, 281, 10)
+    resumen_items = [
+        f"Total vehiculos: {stats.get('total_veh', len(vehiculos))}",
+        f"Lavados generales: {stats.get('total_gen', 0)}",
+        f"Sin lavado: {stats.get('sin_gen', 0)}",
+        f"Cumplimiento: {stats.get('pct_cum', 0)}%",
     ]
-    _draw_kpi_strip(pdf, kpis)
-    pdf.ln(6)
+    col_w = 281 / len(resumen_items)
+    x = 8
+    for item in resumen_items:
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_text_color(*C_BLACK)
+        pdf.set_xy(x + 1, y_res + 3)
+        pdf.cell(col_w - 2, 5, _t(item), align='C')
+        x += col_w
+    pdf.set_y(y_res + 10 + 4)
 
     _section(pdf, 'Listado Completo de Vehiculos')
-    cols = [28, 50, 30, 30, 60, 35, 20, 8]
-    hdrs = ['Placa', 'Municipio', 'Tipo', 'Ruta', 'Supervisor', 'Ultimo Lavado', 'Lav.', '']
-    _table_header(pdf, hdrs[:-1], cols[:-1])
+    cols = [30, 62, 32, 35, 72, 35, 15]
+    hdrs = ['Placa', 'Municipio', 'Tipo', 'Ruta', 'Supervisor', 'Ultimo Lavado', 'Lav.']
+    _table_header(pdf, hdrs, cols)
 
     sorted_veh = sorted(vehiculos, key=lambda v: (v.get('mun', ''), v.get('placa', '')))
     for idx, v in enumerate(sorted_veh):
         bg = C_LIGHT if idx % 2 else C_WHITE
         lav = v.get('lavGen', 0)
-        first_color = C_GREEN if lav > 0 else C_RED
         _table_row(pdf, [
             _t(v.get('placa', '')),
             _t(v.get('mun', 'N/D')),
@@ -362,110 +401,76 @@ def _reporte_flota(vehiculos, stats, responsable):
             _t(v.get('sup', 'N/D')),
             _t(v.get('ultimo', 'NUNCA')),
             str(lav)
-        ], cols[:-1], bg=bg, first_color=first_color)
+        ], cols, bg=bg)
 
+    _firma_coordinador(pdf)
     return bytes(pdf.output())
+
 
 
 # ── Helpers de dibujo ─────────────────────────────────────────────────────────
 def _section(pdf: CleanReport, title: str):
-    """Encabezado de sección limpio."""
-    y = pdf.get_y() + 1
-    pdf.set_draw_color(*C_ACCENT)
-    pdf.set_line_width(0.6)
-    pdf.line(18, y, 23, y)
-    pdf.set_line_width(0.2)
-    pdf.set_font('Helvetica', 'B', 9)
-    pdf.set_text_color(*C_DARK)
-    pdf.set_xy(25, y - 3)
-    pdf.cell(0, 6, _t(title).upper(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    """Encabezado de seccion limpio, estilo planilla."""
     pdf.ln(2)
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_text_color(*C_BLACK)
+    pdf.set_x(8)
+    pdf.cell(0, 6, _t(title).upper(), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(1)
 
 
-def _draw_kpi_strip(pdf: CleanReport, kpis: list):
-    """Fila de tarjetas KPI compactas."""
-    n    = len(kpis)
-    x0   = 18
-    gap  = 4
-    total_w = 261  # 297 - 18*2
-    w_c  = (total_w - gap * (n - 1)) / n
-    h    = 20
-    y    = pdf.get_y()
-
-    for i, (label, value, color) in enumerate(kpis):
-        x = x0 + i * (w_c + gap)
-        # Fondo y borde
-        pdf.set_fill_color(*C_LIGHT)
-        pdf.set_draw_color(*C_RULE)
-        pdf.set_line_width(0.25)
-        pdf.rect(x, y, w_c, h, 'FD')
-        # Línea de color izquierda
-        pdf.set_fill_color(*color)
-        pdf.rect(x, y, 2, h, 'F')
-        # Valor
-        pdf.set_font('Helvetica', 'B', 14)
-        pdf.set_text_color(*color)
-        pdf.set_xy(x + 4, y + 2)
-        pdf.cell(w_c - 6, 8, _t(value), align='C')
-        # Etiqueta
-        pdf.set_font('Helvetica', 'B', 5.5)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(x + 4, y + 11)
-        pdf.cell(w_c - 6, 5, _t(label).upper(), align='C')
-
-    pdf.set_y(y + h + 4)
+def _firma_coordinador(pdf: CleanReport):
+    """Fila de firma al final, igual que en la planilla FT-OP-15."""
+    if pdf.get_y() + 12 > 197:
+        pdf.add_page()
+    y_obs = pdf.get_y() + 2
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.4)
+    pdf.rect(8, y_obs, 281, 10)
+    pdf.set_font('Helvetica', 'B', 8)
+    pdf.set_xy(10, y_obs + 3)
+    pdf.cell(80, 4, 'OBSERVACIONES:', align='L')
+    pdf.set_xy(160, y_obs + 3)
+    pdf.cell(120, 4, 'FIRMA COORDINADOR DE ZONA: ___________________________', align='L')
 
 
 def _table_header(pdf: CleanReport, headers: list, col_widths: list):
-    """Encabezado de tabla con fondo oscuro."""
+    """Encabezado de tabla con fondo gris claro, estilo planilla."""
     y = pdf.get_y()
-    total_w = sum(col_widths)
-    pdf.set_fill_color(*C_BLACK)
+    pdf.set_fill_color(*C_HEADER_BG)
     pdf.set_draw_color(*C_BLACK)
-    pdf.set_line_width(0)
-    pdf.rect(18, y, total_w, 7, 'F')
-
-    x = 18
+    pdf.set_line_width(0.4)
+    x = 8
     for hdr, w in zip(headers, col_widths):
-        pdf.set_font('Helvetica', 'B', 7)
-        pdf.set_text_color(*C_WHITE)
-        pdf.set_xy(x + 2, y + 1.5)
-        pdf.cell(w - 4, 4, _t(hdr).upper(), align='L')
+        pdf.rect(x, y, w, 9, 'FD')
+        pdf.set_font('Helvetica', 'B', 8)
+        pdf.set_text_color(*C_BLACK)
+        pdf.set_xy(x + 1, y + 2.5)
+        pdf.cell(w - 2, 4.5, _t(hdr).upper(), align='C')
         x += w
-    pdf.set_y(y + 7)
+    pdf.set_y(y + 9)
 
 
 def _table_row(pdf: CleanReport, cells: list, col_widths: list,
                bg=C_WHITE, first_color=None, last_color=None):
-    """Fila de tabla. first_color aplica al primer campo (placa), last_color al último."""
-    if pdf.get_y() + 6.5 > 188:
+    """Fila de tabla estilo planilla, sin colores de acento."""
+    ROW_H = 7.5
+    if pdf.get_y() + ROW_H > 195:
         pdf.add_page()
-        pdf.set_y(28)
 
     y = pdf.get_y()
-    total_w = sum(col_widths)
-    pdf.set_fill_color(*bg)
-    pdf.set_draw_color(*C_RULE)
-    pdf.set_line_width(0.15)
-    pdf.rect(18, y, total_w, 6.5, 'FD')
-
-    x = 18
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.25)
+    x = 8
     for i, (cell, w) in enumerate(zip(cells, col_widths)):
-        if i == 0 and first_color:
-            color = first_color
-            style = 'B'
-        elif i == len(cells) - 1 and last_color:
-            color = last_color
-            style = 'B'
-        else:
-            color = C_DARK
-            style = ''
-        pdf.set_font('Helvetica', style, 7.5)
-        pdf.set_text_color(*color)
-        pdf.set_xy(x + 2, y + 1.5)
-        pdf.cell(w - 4, 4, str(cell)[:40], align='L')
+        pdf.set_fill_color(*bg)
+        pdf.rect(x, y, w, ROW_H, 'FD')
+        pdf.set_font('Helvetica', 'B' if i == 0 else '', 8)
+        pdf.set_text_color(*C_BLACK)
+        pdf.set_xy(x + 1.5, y + (ROW_H - 4.5) / 2)
+        pdf.cell(w - 3, 4.5, str(cell)[:45], align='L')
         x += w
-    pdf.set_y(y + 6.5)
+    pdf.set_y(y + ROW_H)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -514,9 +519,15 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
     # ─── 2. Agrupar por lavador ──────────────────────────────────────────
     por_lavador = defaultdict(list)
     for h in historial:
-        lav = (h.get('lavador') or '').strip().upper()
-        if lav:
-            por_lavador[lav].append(h)
+        lavs = h.get('lavadores', [])
+        if not lavs:
+            lav = (h.get('lavador') or '').strip().upper()
+            lavs = [lav] if lav else []
+            
+        for lav in lavs:
+            lav = lav.strip().upper()
+            if lav:
+                por_lavador[lav].append(h)
 
     # ─── 3. Paleta premium ───────────────────────────────────────────────
     C_NAVY  = (8,  14, 44)       # Azul marino profundo
@@ -774,22 +785,28 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
         pdf.set_font('Helvetica', 'B', 8)
         pdf.set_text_color(*C_AZURE)
         pdf.set_xy(110, 21)
-        pdf.cell(80, 5, _t(f'{len(lavados)} servicios  |  periodo activo'), align='R')
+        total_lavados_frac = sum((1.0 / (len(l.get('lavadores', [])) or 1)) for l in lavados)
+        display_lavados = f"{total_lavados_frac:g}"
+        pdf.cell(80, 5, _t(f'{display_lavados} servicios  |  periodo activo'), align='R')
 
         # ── Mini KPIs del lavador ─────────────────────────────────────────
         tc = {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
         t_mins = 0; t_pago = 0
         for l in lavados:
             tipo = l.get('tipo_lavado', 'General')
-            tc[tipo] = tc.get(tipo, 0) + 1
-            t_pago += float(tarifas.get(tipo, 0))
-            t_mins += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', ''))
+            n_lavadores = len(l.get('lavadores', []))
+            if n_lavadores == 0:
+                n_lavadores = 1
+                
+            tc[tipo] = tc.get(tipo, 0) + (1.0 / n_lavadores)
+            t_pago += float(tarifas.get(tipo, 0)) / n_lavadores
+            t_mins += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lavadores
 
         mkpi = [
-            ('Generales',  str(tc['General']),  C_AZURE),
-            ('Sencillos',  str(tc['Sencillo']), C_TEAL),
-            ('Enjuagues',  str(tc['Enjuague']), C_AMBER),
-            ('Hrs Trabajadas', f'{t_mins//60}h {t_mins%60:02d}m', C_MUTED),
+            ('Generales',  f"{tc['General']:g}",  C_AZURE),
+            ('Sencillos',  f"{tc['Sencillo']:g}", C_TEAL),
+            ('Enjuagues',  f"{tc['Enjuague']:g}", C_AMBER),
+            ('Hrs Trabajadas', f'{int(t_mins)//60}h {int(t_mins)%60:02d}m', C_MUTED),
         ]
         mk_w = 37; mk_h = 22; mk_gap = 5
         mk_y = 57
@@ -851,10 +868,14 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
             pdf.set_line_width(0.1)
             pdf.rect(20, ry, sum(SVC_COLS), 7, 'FD')
 
+            n_lavadores = len(l.get('lavadores', []))
+            if n_lavadores == 0:
+                n_lavadores = 1
+            
             cells = [
                 l.get('fecha', '-'), l.get('placa', '-'), tipo,
                 l.get('hora_inicio', '-'), l.get('hora_fin', '-'),
-                dur_str, f'${tarifa_u:,.0f}', f'${tarifa_u:,.0f}',
+                dur_str, f'${tarifa_u:,.0f}', f'${tarifa_u / n_lavadores:,.0f}',
             ]
             x = 20
             for ci, (cell, cw) in enumerate(zip(cells, SVC_COLS)):
@@ -907,7 +928,7 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
         pdf.set_text_color(*C_MUTED)
         pdf.set_xy(tb_x, tb_y + 30)
         pdf.cell(tb_w, 4,
-            _t(f'{len(lavados)} servicio(s)  |  {t_mins//60}h {t_mins%60:02d}m trabajados'),
+            _t(f'{display_lavados} servicio(s)  |  {int(t_mins)//60}h {int(t_mins)%60:02d}m trabajados'),
             align='C')
 
         _footer(page_num)
@@ -962,9 +983,13 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
         pl = 0; ml = 0
         for l in lavs:
             tipo = l.get('tipo_lavado', 'General')
-            tc2[tipo] = tc2.get(tipo, 0) + 1
-            pl += float(tarifas.get(tipo, 0))
-            ml += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', ''))
+            n_lavadores = len(l.get('lavadores', []))
+            if n_lavadores == 0:
+                n_lavadores = 1
+                
+            tc2[tipo] = tc2.get(tipo, 0) + (1.0 / n_lavadores)
+            pl += float(tarifas.get(tipo, 0)) / n_lavadores
+            ml += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lavadores
         grand_total += pl; grand_mins += ml
 
         bg = C_SLATE if idx % 2 else C_WHITE
@@ -975,8 +1000,8 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
         pdf.rect(20, ry, sum(SR_COLS), 8.5, 'FD')
         row = [
             lav_name.title(),
-            str(tc2['General']), str(tc2['Sencillo']), str(tc2['Enjuague']),
-            f'{ml//60}h {ml%60:02d}m', f'${pl:,.0f}',
+            f"{tc2['General']:g}", f"{tc2['Sencillo']:g}", f"{tc2['Enjuague']:g}",
+            f'{int(ml)//60}h {int(ml)%60:02d}m', f'${pl:,.0f}',
         ]
         x = 20
         for ci, (cell, cw) in enumerate(zip(row, SR_COLS)):
@@ -1055,3 +1080,191 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
     _footer(page_num)
     return bytes(pdf.output())
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REPORTE 6: LAVADOS DIARIOS — Planilla FT-OP-15
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DiarioReport(FPDF):
+    """Reporte diario con encabezado exacto de la Planilla de Lavado FT-OP-15."""
+
+    # Anchos de columna (orientación Landscape A4 = 297mm, márgenes 8mm c/u → 281mm útiles)
+    COL_W = [22, 17, 26, 20, 20, 17, 20, 17, 11, 11, 11, 50, 30]
+    COL_H = [
+        'TIPO DE\nVEHICULO', 'PLACA', 'MUNICIPIO',
+        'HORA\nLLEGADA\nLAVADERO', 'HORA\nINGRESO\nLAVADO',
+        'TIEMPO\nESPERA', 'HORA\nSALIDA\nLAVADO',
+        'TIEMPO\nLAVADO', 'ENJUA\nGUE', 'SENCI\nLLO',
+        'GENE\nRAL', 'NOMBRE LAVADOR', 'FIRMA CONDUCTOR'
+    ]
+
+    def __init__(self, fecha_reporte: str):
+        super().__init__(orientation='L', unit='mm', format='A4')
+        self.fecha_rep = _t(fecha_reporte)
+        self.set_margins(8, 8, 8)
+        self.set_auto_page_break(auto=True, margin=14)
+
+    def header(self):
+        self.set_draw_color(*C_BLACK)
+        self.set_line_width(0.4)
+        y0 = 8
+
+        # ── Fila 1: Logo | Título | Código/Versión ──────────────────────────
+        # Logo box
+        self.rect(8, y0, 38, 18)
+        self.set_font('Helvetica', 'B', 13)
+        self.set_text_color(*C_BLACK)
+        self.set_xy(8, y0 + 4)
+        self.cell(38, 10, 'futuraseo', align='C')
+
+        # Title box (expanded to fill the remaining width: 281 - 38 = 243)
+        self.rect(46, y0, 243, 18)
+        self.set_font('Helvetica', 'B', 10)
+        self.set_xy(46, y0 + 2)
+        self.cell(243, 7, 'CONTROL TIEMPO LAVADO VEHICULAR', align='C')
+        self.set_font('Helvetica', 'B', 8)
+        self.set_xy(46, y0 + 9)
+        self.cell(243, 6, 'OPERACIONES', align='C')
+
+        # ── Fila 2: Fecha | Zona ────────────────────────────────────────────
+        y1 = y0 + 18
+        self.rect(8, y1, 281, 7)
+        self.set_font('Helvetica', 'B', 8)
+        self.set_xy(10, y1 + 1.5)
+        self.cell(90, 4, f'FECHA: {self.fecha_rep}', align='L')
+        self.set_xy(100, y1 + 1.5)
+        self.cell(130, 4, 'ZONA: URABA', align='L')
+        self.set_xy(230, y1 + 1.5)
+        self.cell(57, 4, f'Pag. {self.page_no()}', align='C')
+
+        # ── Fila 3: Encabezados de columnas ────────────────────────────────
+        y2 = y1 + 7
+        self.set_font('Helvetica', 'B', 6.5)
+        self.set_fill_color(220, 220, 220)
+        x = 8
+        for w, txt in zip(self.COL_W, self.COL_H):
+            self.rect(x, y2, w, 12, 'FD')
+            lines = txt.split('\n')
+            line_h = 3.5
+            total_h = len(lines) * line_h
+            start_y = y2 + (12 - total_h) / 2
+            for li, line in enumerate(lines):
+                self.set_xy(x, start_y + li * line_h)
+                self.cell(w, line_h, _t(line), align='C')
+            x += w
+
+        self.set_y(y2 + 12)
+
+    def footer(self):
+        self.set_y(-10)
+        self.set_font('Helvetica', '', 6.5)
+        self.set_text_color(*C_MUTED)
+        self.cell(0, 5, _t(f'Flota Uraba  -  Sistema de Gestion de Lavados  |  Planilla Diaria FT-OP-15  |  Pag. {self.page_no()}'), align='C')
+
+
+def _reporte_lavados_diarios(historial: list, vehiculos: list, start_date: str, end_date: str, responsable: str) -> bytes:
+    """Genera la planilla diaria FT-OP-15 para la fecha o rango indicado."""
+
+    # Formatear fecha para mostrar: YYYY-MM-DD → DD-MM-YYYY
+    def format_fecha(f):
+        try:
+            parts = str(f).split('-')
+            return f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else f
+        except Exception:
+            return f
+            
+    if start_date == end_date:
+        fecha_str = format_fecha(start_date)
+    else:
+        fecha_str = f"{format_fecha(start_date)} al {format_fecha(end_date)}"
+
+    pdf = DiarioReport(fecha_reporte=fecha_str)
+    pdf.add_page()
+
+    # Filtrar lavados del rango y ordenarlos por fecha y hora
+    records = [h for h in historial if start_date <= h.get('fecha', '') <= end_date]
+    records.sort(key=lambda x: (x.get('fecha', ''), x.get('hora_llegada', '')))
+
+    # Mapa placa → tipo de vehículo
+    placa_to_tipo = {v['placa']: v.get('tipo', 'N/D') for v in vehiculos}
+
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.25)
+    pdf.set_text_color(*C_DARK)
+
+    ROW_H = 7.0
+
+    for r in records:
+        if pdf.get_y() + ROW_H > 195:
+            pdf.add_page()
+
+        placa    = _t(r.get('placa', ''))
+        tipo_veh = _t(placa_to_tipo.get(placa, 'N/D'))
+        mun      = _t(r.get('municipio', r.get('mun', '')))
+        llegada  = _t(r.get('hora_llegada', ''))
+        inicio   = _t(r.get('hora_inicio', r.get('hora', '')))
+        fin      = _t(r.get('hora_fin', ''))
+
+        # Tiempos (minutos → "Xh YYm" o solo minutos)
+        def fmt_min(val):
+            if val is None or val == '': return ''
+            try:
+                m = int(val)
+                return f'{m}m' if m < 60 else f'{m//60}h {m%60:02d}m'
+            except Exception:
+                return _t(str(val))
+
+        t_espera = fmt_min(r.get('tiempo_espera'))
+        t_lavado = fmt_min(r.get('tiempo_lavado'))
+
+        tipo_lav = (r.get('tipo_lavado') or 'General').upper()
+        enj = 'X' if 'ENJUAGUE' in tipo_lav else ''
+        sen = 'X' if 'SENCILLO' in tipo_lav else ''
+        gen = 'X' if 'GENERAL'  in tipo_lav else ''
+
+        lavs = r.get('lavadores') or []
+        if not lavs:
+            lav_raw = r.get('lavador', '')
+            if lav_raw: lavs = [lav_raw]
+        lav_n = _t(', '.join(lavs))
+
+        row_data = [tipo_veh, placa, mun, llegada, inicio, t_espera, fin, t_lavado, enj, sen, gen, lav_n, '']
+
+        y = pdf.get_y()
+        x = 8
+        for i, (cell_text, w) in enumerate(zip(row_data, DiarioReport.COL_W)):
+            pdf.rect(x, y, w, ROW_H)
+            pdf.set_font('Helvetica', 'B' if i in (0, 1) else '', 7.5)
+            pdf.set_xy(x + 1, y + (ROW_H - 4) / 2)
+            pdf.cell(w - 2, 4, str(cell_text)[:30], align='C' if i not in (2, 11) else 'L')
+            x += w
+        pdf.set_y(y + ROW_H)
+
+    # Rellenar filas vacías hasta completar la página (mínimo 5 filas vacías)
+    filled = len(records)
+    min_rows = max(5, filled + 3)
+    while filled < min_rows and pdf.get_y() + ROW_H < 193:
+        y = pdf.get_y()
+        x = 8
+        for w in DiarioReport.COL_W:
+            pdf.rect(x, y, w, ROW_H)
+            x += w
+        pdf.set_y(y + ROW_H)
+        filled += 1
+
+    # ── Fila de Observaciones + Firma ──────────────────────────────────────
+    y_obs = pdf.get_y()
+    if y_obs + 10 > 197:
+        pdf.add_page()
+        y_obs = pdf.get_y()
+
+    pdf.set_draw_color(*C_BLACK)
+    pdf.set_line_width(0.4)
+    pdf.rect(8, y_obs, 281, 10)
+    pdf.set_font('Helvetica', 'B', 8)
+    pdf.set_xy(10, y_obs + 3)
+    pdf.cell(80, 4, 'OBSERVACIONES:', align='L')
+    pdf.set_xy(160, y_obs + 3)
+    pdf.cell(120, 4, f'FIRMA COORDINADOR DE ZONA: ___________________________', align='L')
+
+    return bytes(pdf.output())

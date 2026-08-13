@@ -12,5 +12,47 @@
     "name": "Lavador Prueba",
     "role": "lavador",
     "active": true
+  },
+  {
+    "username": "lavador_a0319b",
+    "password": "N/A",
+    "name": "ELIFELE SIMANCA",
+    "role": "lavador",
+    "active": true
+  },
+  {
+    "username": "lavador_fd61c5",
+    "password": "N/A",
+    "name": "JAIDER MORENO",
+    "role": "lavador",
+    "active": true
+  },
+  {
+    "username": "lavador_e0e607",
+    "password": "N/A",
+    "name": "MOISES GOMEZ",
+    "role": "lavador",
+    "active": true
+  },
+  {
+    "username": "lavador_bb3ee7",
+    "password": "N/A",
+    "name": "LUIS GOMEZ",
+    "role": "lavador",
+    "active": true
+  },
+  {
+    "username": "lavador_b7c2ab",
+    "password": "N/A",
+    "name": "HADER CORREA",
+    "role": "lavador",
+    "active": true
+  },
+  {
+    "username": "lavador_91fbfa",
+    "password": "N/A",
+    "name": "JORGE ARROYO",
+    "role": "lavador",
+    "active": true
   }
 ]

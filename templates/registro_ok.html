@@ -172,19 +172,31 @@
         <span class="det-val">{{ tipo_lavado }}</span>
       </div>
       <div class="det-row">
-        <span class="det-lbl">Lavador</span>
-        <span class="det-val">{{ lavador }}</span>
+        <span class="det-lbl">Lavadores</span>
+        <span class="det-val">
+          {% if lavadores is iterable and lavadores is not string %}
+            {{ lavadores | join(', ') }}
+          {% else %}
+            {{ lavadores }}
+          {% endif %}
+        </span>
       </div>
       <div class="det-row">
         <span class="det-lbl">Fecha</span>
         <span class="det-val">{{ fecha_fmt }}</span>
       </div>
+      {% if hora_llegada %}
       <div class="det-row">
-        <span class="det-lbl">Hora Inicio</span>
+        <span class="det-lbl">Llegada lavadero</span>
+        <span class="det-val">{{ hora_llegada }}</span>
+      </div>
+      {% endif %}
+      <div class="det-row">
+        <span class="det-lbl">Inicio lavado</span>
         <span class="det-val">{{ hora_inicio }}</span>
       </div>
       <div class="det-row">
-        <span class="det-lbl">Hora Fin</span>
+        <span class="det-lbl">Fin lavado</span>
         <span class="det-val">{{ hora_fin }}</span>
       </div>
     </div>

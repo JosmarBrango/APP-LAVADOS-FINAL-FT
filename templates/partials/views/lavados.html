@@ -1,0 +1,138 @@
+<!-- ─── VISTA: Todos los Lavados ──────────────────────── -->
+<div id="view-lavados" class="section">
+  <div class="lavados-hdr">
+    <div>
+      <div class="lavados-hdr-title">Registro de Lavados</div>
+      <div class="lavados-hdr-sub">Todos los lavados registrados — General, Sencillo y Enjuague</div>
+    </div>
+    <button class="btn btn-em" onclick="openLavadoModal()" style="padding:10px 20px;font-size:13px;gap:8px;flex-shrink:0;">
+      <span class="material-symbols-outlined" style="font-size:18px;">add_circle</span> Registrar lavado
+    </button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="lav-kpi-grid" id="lavKpiGrid">
+    <div class="lav-kpi-card lav-kpi-total">
+      <div class="lav-kpi-icon"><span class="material-symbols-outlined">water_drop</span></div>
+      <div class="lav-kpi-body">
+        <div class="lav-kpi-val" id="lavKpiTotal">0</div>
+        <div class="lav-kpi-lbl">Total lavados</div>
+      </div>
+    </div>
+    <div class="lav-kpi-card lav-kpi-gen">
+      <div class="lav-kpi-icon"><span class="material-symbols-outlined">local_car_wash</span></div>
+      <div class="lav-kpi-body">
+        <div class="lav-kpi-val" id="lavKpiGen">0</div>
+        <div class="lav-kpi-lbl">Generales</div>
+      </div>
+    </div>
+    <div class="lav-kpi-card lav-kpi-sen">
+      <div class="lav-kpi-icon"><span class="material-symbols-outlined">opacity</span></div>
+      <div class="lav-kpi-body">
+        <div class="lav-kpi-val" id="lavKpiSen">0</div>
+        <div class="lav-kpi-lbl">Sencillos</div>
+      </div>
+    </div>
+    <div class="lav-kpi-card lav-kpi-enj">
+      <div class="lav-kpi-icon"><span class="material-symbols-outlined">shower</span></div>
+      <div class="lav-kpi-body">
+        <div class="lav-kpi-val" id="lavKpiEnj">0</div>
+        <div class="lav-kpi-lbl">Enjuagues</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel de filtros -->
+  <div class="lav-filter-panel">
+    <!-- Fila 1: Selectores -->
+    <div class="lav-filter-row">
+      <div class="lav-filter-group">
+        <label class="lav-filter-label">Tipo de lavado</label>
+        <select id="lavTipo" class="lav-select" onchange="renderTodosLavados()">
+          <option value="">Todos los tipos</option>
+          <option value="General">General</option>
+          <option value="Sencillo">Sencillo</option>
+          <option value="Enjuague">Enjuague</option>
+        </select>
+      </div>
+      <div class="lav-filter-group">
+        <label class="lav-filter-label">Municipio</label>
+        <select id="lavMun2" class="lav-select" onchange="renderTodosLavados()">
+          <option value="">Todos los municipios</option>
+        </select>
+      </div>
+      <div class="lav-filter-group">
+        <label class="lav-filter-label">Lavador</label>
+        <select id="lavPersonal" class="lav-select" onchange="renderTodosLavados()">
+          <option value="">Todos los lavadores</option>
+        </select>
+      </div>
+      <div class="lav-filter-group lav-filter-grow">
+        <label class="lav-filter-label">Buscar placa</label>
+        <div style="position:relative;">
+          <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none;">search</span>
+          <input id="lavSearch" type="text" placeholder="Ej: ABC123…" oninput="renderTodosLavados()"
+            style="width:100%;padding:9px 12px 9px 34px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;color:var(--text);outline:none;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+      </div>
+    </div>
+    <!-- Fila 2: Fechas + Chips + Limpiar -->
+    <div class="lav-filter-row">
+      <div class="lav-filter-group">
+        <label class="lav-filter-label">Fecha desde</label>
+        <input id="lavDesde" type="date" class="lav-date-input" onchange="renderTodosLavados()">
+      </div>
+      <div class="lav-filter-group">
+        <label class="lav-filter-label">Fecha hasta</label>
+        <input id="lavHasta" type="date" class="lav-date-input" onchange="renderTodosLavados()">
+      </div>
+      <div class="lav-filter-group" style="justify-content:flex-end;">
+        <label class="lav-filter-label">Acceso rápido</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="lav-chip" id="lavChipHoy" onclick="_lavSetDateRange('hoy', this)">Hoy</button>
+          <button class="lav-chip" id="lavChipSemana" onclick="_lavSetDateRange('semana', this)">Esta semana</button>
+          <button class="lav-chip" id="lavChipMes" onclick="_lavSetDateRange('mes', this)">Este mes</button>
+        </div>
+      </div>
+      <div class="lav-filter-group lav-filter-actions">
+        <label class="lav-filter-label">&nbsp;</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="lav-btn-clear" onclick="_lavLimpiarFiltros()">
+            <span class="material-symbols-outlined" style="font-size:15px;">close</span> Limpiar
+          </button>
+          <span class="lav-count-badge" id="lavCount">0 registros</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Placa</th>
+          <th>Municipio</th>
+          <th>Tipo</th>
+          <th>Lavadores</th>
+          <th>Fecha</th>
+          <th>Llegada</th>
+          <th>Inicio → Fin</th>
+          <th>Espera</th>
+          <th>Duración</th>
+          <th>Origen</th>
+          {% if user.get('role') == 'admin' %}<th style="text-align:right">Acc.</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody id="lavBody"></tbody>
+    </table>
+    <!-- Estado vacío -->
+    <div id="lavEmptyState" class="lav-empty" style="display:none;">
+      <span class="material-symbols-outlined lav-empty-icon">water_drop</span>
+      <div class="lav-empty-title">Sin resultados</div>
+      <div class="lav-empty-sub">No se encontraron lavados con los filtros actuales.<br>Prueba ajustando los filtros o registra un nuevo lavado.</div>
+      <button class="btn btn-ghost" onclick="_lavLimpiarFiltros()" style="margin-top:16px;padding:9px 20px;font-size:13px;">Limpiar filtros</button>
+    </div>
+  </div>
+</div>

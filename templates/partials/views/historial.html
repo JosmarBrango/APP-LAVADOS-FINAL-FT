@@ -1,0 +1,51 @@
+<!-- ─── VISTA: Historial / Escáner QR ───────────────────── -->
+<div id="view-historial" class="section">
+  <div class="filter-bar"
+    style="background:var(--surface);padding:16px 18px;border-radius:var(--radius-lg);margin-bottom:16px;box-shadow:var(--shadow-xs);border:1px solid var(--border);flex-wrap:wrap;gap:10px;">
+    <button class="btn btn-primary" onclick="startQRScanner()" style="padding:10px 20px;gap:8px;">
+      <span style="font-size:16px">📷</span> Escanear Código QR
+    </button>
+      <button class="btn btn-em" onclick="openLavadoModal()"
+        style="padding:8px 16px;font-size:12px;gap:6px;flex-shrink:0;">
+        ✨ Registro Manual
+      </button>
+    <input id="histDesde" type="date" title="Desde" onchange="renderHistorial()"
+      style="background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;">
+    <input id="histHasta" type="date" title="Hasta" onchange="renderHistorial()"
+      style="background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 12px;outline:none;">
+    <input id="histSearch" type="text" placeholder="Buscar placa…" oninput="renderHistorial()"
+      style="background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:8px 14px;outline:none;width:140px;">
+    <button class="btn btn-ghost"
+      onclick="document.getElementById('histDesde').value='';document.getElementById('histHasta').value='';document.getElementById('histSearch').value='';renderHistorial();"
+      style="padding:8px 14px;font-size:12px;">✕ Limpiar</button>
+    <span class="tbl-count" id="histCount" style="margin-left:auto;">0 registros</span>
+  </div>
+  <div id="qr-reader-container"
+    style="display:none;max-width:500px;margin:0 auto 20px;background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--border);">
+    <div
+      style="padding:14px;background:var(--s2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-weight:700;font-size:14px;">Escáner de Lavados</span>
+      <button class="btn btn-ghost" onclick="stopQRScanner()"
+        style="padding:5px 10px;font-size:12px;color:var(--red)">Cerrar Cámara</button>
+    </div>
+    <div id="qr-reader" style="width:100%"></div>
+  </div>
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Placa</th>
+          <th>Tipo</th>
+          <th>Lavadores</th>
+          <th>Fecha</th>
+          <th>Llegada</th>
+          <th>Inicio → Fin</th>
+          <th>Espera</th>
+          <th>Duración</th>
+          <th>Origen</th>
+        </tr>
+      </thead>
+      <tbody id="histBody"></tbody>
+    </table>
+  </div>
+</div>

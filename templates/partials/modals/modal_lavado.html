@@ -1,0 +1,72 @@
+<!-- Modal Registrar Lavado -->
+<div class="modal-bg" id="modalLavado">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-title">Registrar lavado</div>
+    <div class="modal-sub">Registra un lavado realizado para actualizar los indicadores.</div>
+    <form id="formLavado" onsubmit="saveLavado(event)">
+      <div class="field-row">
+        <div class="field">
+          <label>Placa del vehículo</label>
+          <input type="text" id="mlPlaca" list="placasList" required placeholder="Ej: ABC123" autocomplete="off"
+            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;text-transform:uppercase;">
+          <datalist id="placasList"></datalist>
+        </div>
+        <div class="field">
+          <label>Tipo de lavado</label>
+          <select id="mlTipoLavado" required
+            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+            <option value="" disabled selected>Selecciona...</option>
+            <option value="General">Lavado General</option>
+            <option value="Sencillo">Lavado Sencillo</option>
+            <option value="Enjuague">Solo Enjuague</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Municipio</label>
+        <input type="text" id="mlMunicipio" placeholder="Ej: Apartadó, Turbo...">
+      </div>
+      <!-- Múltiples Lavadores -->
+      <div class="field">
+        <label>Lavadores <span style="color:var(--muted);font-size:11px;font-weight:400">(selecciona todos los que
+            participaron)</span></label>
+        <div id="mlLavadoresList" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;" class="lav-row">
+            <select name="mlLavadorSel" class="ml-lav-select"
+              style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+              <option value="" disabled selected>Selecciona un lavador...</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" id="btnAddMlLavador" onclick="addModalLavRow()"
+          style="margin-top:8px;width:100%;padding:9px;background:var(--s2);border:1px dashed var(--border);border-radius:10px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+          ＋ Agregar otro lavador
+        </button>
+      </div>
+      <div class="field">
+        <label>Fecha del lavado <span style="font-size:10px;color:var(--muted);font-weight:600;">(solo se permite la fecha de hoy)</span></label>
+        <input type="date" id="mlFechaVisible" disabled>
+        <input type="hidden" id="mlFecha">
+      </div>
+      <!-- 3 tiempos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div class="field"><label>Llegada lavadero</label><input type="time" id="mlHoraLlegada"></div>
+        <div class="field"><label>Inicio lavado</label><input type="time" id="mlHoraInicio"></div>
+        <div class="field"><label>Fin lavado</label><input type="time" id="mlHoraFin"></div>
+      </div>
+      <!-- Badge tiempos calculados -->
+      <div id="mlCalcBadges" style="display:none;gap:10px;margin-top:4px;flex-wrap:wrap;">
+        <span
+          style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:#166534;">⏳
+          Espera: <b id="mlValEspera">—</b></span>
+        <span
+          style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:#166534;">🚿
+          Duración: <b id="mlValLavado">—</b></span>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalLavado')">Cancelar</button>
+        <button type="submit" class="btn btn-em">Registrar lavado</button>
+      </div>
+    </form>
+  </div>
+</div>

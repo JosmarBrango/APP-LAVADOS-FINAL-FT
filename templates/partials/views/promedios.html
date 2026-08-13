@@ -1,0 +1,38 @@
+<!-- ─── VISTA: Promedios ───────────────────────────────── -->
+<div id="view-promedios" class="section">
+  <div class="filter-bar">
+    <select id="promMun" onchange="renderPromedios()">
+      <option value="">Todos los municipios</option>
+    </select>
+    <select id="promEst" onchange="renderPromedios()">
+      <option value="">Todos los estados</option>
+      <option value="critico">Crítico (0 lavados)</option>
+      <option value="con">Con algún lavado</option>
+    </select>
+    <input id="promSearch" type="text" placeholder="Buscar placa…" oninput="renderPromedios()"
+      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
+    <span class="tbl-count" id="promCount">0 vehículos</span>
+  </div>
+  <div class="table-wrap">
+    <div class="hm-wrap">
+      <table class="hm-tbl">
+        <thead>
+          <tr>
+            <th class="left">Placa</th>
+            <th class="left">Municipio</th>
+            <th class="left">Lavados</th>
+            <th>Dom</th>
+            <th>Lun</th>
+            <th>Mar</th>
+            <th>Mié</th>
+            <th>Jue</th>
+            <th>Vie</th>
+            <th>Sáb</th>
+            <th>Mejor día</th>
+          </tr>
+        </thead>
+        <tbody id="promBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -17,7 +17,7 @@ DAY_MAP = {
 # ─── Constantes del negocio ───────────────────────────────────────────────────
 CUTOFF_MIN   = 990    # 16:30 — hora máxima de llegada para poder lavar
 WASH_HOURS   = 3      # horas mínimas para lavado general
-MAX_POR_DIA  = 4      # máximo de vehículos por día en el lavadero
+MAX_POR_DIA  = 3      # máximo de vehículos por día en el lavadero
 
 # ─── Helpers básicos ──────────────────────────────────────────────────────────
 def allowed_file(filename):
@@ -154,11 +154,6 @@ def process_csv(filepath):
     df_lav['ES_RURAL'] = df_lav['PREFIJO'].isin(rural_prefixes)
     pct_rural = (df_lav.groupby('PLACA')['ES_RURAL'].mean() * 100).round(0) if not df_lav.empty else pd.Series(dtype=float)
 
-    # Lavados generales
-    df_gen   = df[df.get('General ', '0') == '1']
-    n_gen    = df_gen.groupby('PLACA').size()
-    last_gen = df_gen.groupby('PLACA')['FECHA_P'].max()
-
     # ─── MEJORA #4: Promedios con filtro IQR de outliers ─────────────────────
     if not df_lav.empty:
         avg_dow = (
@@ -180,13 +175,6 @@ def process_csv(filepath):
     else:
         hora_gral = 0
 
-    # Período (meses)
-    df['MES_AÑO']  = df['FECHA_P'].dt.to_period('M')
-    meses_unicos   = sorted(df['MES_AÑO'].dropna().unique())
-
-    # Lavados generales por mes
-    gen_por_mes = df_gen.groupby(df_gen['FECHA_P'].dt.to_period('M')).size() if not df_gen.empty else pd.Series(dtype=int)
-
     # Promedio llegada por municipio (excluir municipios inválidos o N/D)
     df_lav['MUN'] = df_lav['PLACA'].map(mun_map).apply(
         lambda x: clean_mun(x) if pd.notna(x) else 'N/D'
@@ -201,12 +189,15 @@ def process_csv(filepath):
         .to_dict()
     ) if not df_lav_mun_valido.empty else {}
 
-    # Tipos de lavado
+    # Tipos de lavado (Ya no importamos del CSV)
     tipo_lavado = {
-        'Enjuague': int((df.get('Enjuague', '0') == '1').sum()),
-        'Sencillo': int((df.get('Sencillo ', '0') == '1').sum()),
-        'General':  int((df.get('General ', '0') == '1').sum()),
+        'Enjuague': 0,
+        'Sencillo': 0,
+        'General':  0,
     }
+
+    # Ya no se importan lavados desde el CSV
+    historial_lavados = []
 
     # Construir lista de vehículos
     placas = sorted(df['PLACA'].unique())
@@ -219,8 +210,8 @@ def process_csv(filepath):
             'ruta':     str(ruta_map.get(placa, 'N/D')),
             'pctRural': int(pct_rural.get(placa, 0)),
             'sup':      sup_map.get(placa, 'N/D'),
-            'lavGen':   int(n_gen.get(placa, 0)),
-            'ultimo':   last_gen[placa].strftime('%d/%m/%Y') if placa in last_gen and pd.notna(last_gen[placa]) else 'NUNCA',
+            'lavGen':   0,
+            'ultimo':   'NUNCA',
             'horaDow':  {}
         }
         veh_dow = avg_dow[avg_dow['PLACA'] == placa]
@@ -236,19 +227,20 @@ def process_csv(filepath):
         vehiculos.append(veh)
 
     total_veh = len(placas)
-    total_gen = int(df_gen.shape[0])
-    sin_gen   = sum(1 for v in vehiculos if v['lavGen'] == 0)
-    n_meses   = len(meses_unicos) if len(meses_unicos) > 0 else 1
+    total_gen = 0
+    sin_gen   = total_veh
+    n_meses   = 1
     meta      = total_veh * n_meses
     deficit   = meta - total_gen
-    pct_cum   = round(total_gen / meta * 100, 1) if meta > 0 else 0
+    pct_cum   = 0
 
-    mes_labels = [str(m) for m in meses_unicos]
-    mes_data   = [int(gen_por_mes.get(m, 0)) for m in meses_unicos]
-    periodo    = f"{mes_labels[0]} — {mes_labels[-1]}" if mes_labels else "Sin datos"
+    mes_labels = []
+    mes_data   = []
+    periodo    = "Sin datos"
 
     return {
         'vehiculos': vehiculos,
+        'historial_lavados': historial_lavados,
         'stats': {
             'total_veh':   total_veh,
             'total_gen':   total_gen,
@@ -269,122 +261,193 @@ def process_csv(filepath):
     }
 
 
-# ─── MEJORA #1: Algoritmo de Programación en Python ──────────────────────────
-def generar_programacion(vehiculos: list, start_date_str: str, end_date_str: str, max_por_dia: int = MAX_POR_DIA, manual_overrides: dict = None) -> list:
+# ─── Algoritmo de Programación Equitativa ────────────────────────────────────
+def generar_programacion(vehiculos: list, start_date_str: str, end_date_str: str,
+                         max_por_dia: int = MAX_POR_DIA,
+                         manual_overrides: dict = None) -> list:
     """
-    Algoritmo greedy mejorado para asignar fechas de lavado general en un rango específico.
+    Distribuye los vehículos EQUITATIVAMENTE en el rango de fechas:
+      - Ningún día tendrá significativamente más lavados que otro.
+      - Se respeta el mejor día de la semana de cada vehículo (horaDow).
+      - Los overrides manuales tienen prioridad absoluta.
+      - IMPORTANTE: Se excluyen los vehículos sin ningún registro de lavado.
     """
+    # Filtrar vehículos que no tienen ningún registro (horaDow vacío)
+    vehiculos = [v for v in vehiculos if len(v.get('horaDow', {})) > 0]
     import datetime as dt
-    
+    import math
+
     try:
         start_date = dt.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        end_date = dt.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        end_date   = dt.datetime.strptime(end_date_str,   '%Y-%m-%d').date()
     except Exception:
-        today = dt.date.today()
+        today      = dt.date.today()
         start_date = today
-        end_date = today + dt.timedelta(days=7)
+        end_date   = today + dt.timedelta(days=30)
 
-    # Rango de fechas
+    # ─── Construir lista y agrupación de fechas ───────────────────────────
     fechas = []
-    fechas_por_dow = {d: [] for d in range(7)}
     curr = start_date
     while curr <= end_date:
-        f_str = curr.strftime('%Y-%m-%d')
-        fechas.append(f_str)
-        # Python weekday: 0=Lun ... 6=Dom -> convert to 0=Dom ... 6=Sab
-        dow = (curr.weekday() + 1) % 7
-        fechas_por_dow[dow].append(f_str)
+        fechas.append(curr.strftime('%Y-%m-%d'))
         curr += dt.timedelta(days=1)
 
-    def turno_info(mins: int) -> dict:
-        if mins <= 870:
-            return {'label': 'Turno ideal',            'color': '#3FB950', 'cls': 'ideal'}
-        if mins <= 930:
-            return {'label': 'Turno bueno',            'color': '#8ACC68', 'cls': 'good'}
-        if mins <= 990:
-            return {'label': 'Turno posible',          'color': '#F0B429', 'cls': 'ok'}
-        return     {'label': 'Requiere coordinación', 'color': '#E3B341', 'cls': 'late'}
+    if not fechas:
+        return []
 
-    # Enriquecer con bestDow y bestMin
-    enriched = []
-    for v in vehiculos:
+    fechas_por_dow: dict[int, list[str]] = {d: [] for d in range(7)}
+    for f in fechas:
+        d_obj = dt.datetime.strptime(f, '%Y-%m-%d').date()
+        dow   = (d_obj.weekday() + 1) % 7   # 0=Dom … 6=Sáb
+        fechas_por_dow[dow].append(f)
+
+    # ─── Helpers ──────────────────────────────────────────────────────────
+    def turno_info(mins: int) -> dict:
+        if mins <= 870: return {'label': 'Turno ideal',            'color': '#3FB950', 'cls': 'ideal'}
+        if mins <= 930: return {'label': 'Turno bueno',            'color': '#8ACC68', 'cls': 'good'}
+        if mins <= 990: return {'label': 'Turno posible',          'color': '#F0B429', 'cls': 'ok'}
+        return             {'label': 'Requiere coordinación',     'color': '#E3B341', 'cls': 'late'}
+
+    def get_best_dow(v: dict) -> tuple[int | None, int]:
+        hora_dow  = v.get('horaDow', {})
         best_dow, best_min = None, 99999
-        hora_dow = v.get('horaDow', {})
         for d_key, entry in hora_dow.items():
             d = int(d_key)
             m = entry.get('m', 99999)
             if m <= CUTOFF_MIN and m < best_min:
                 best_min = m
                 best_dow = d
-        enriched.append({**v, 'bestDow': best_dow, 'bestMin': best_min})
+        return best_dow, best_min
 
-    # Ordenar: prioridad a los que llegan más temprano
-    enriched.sort(key=lambda x: x['bestMin'])
-
-    manual_overrides = manual_overrides or {}
-    ocupacion: dict[str, int] = {}
-    result = []
-    
-    # 1. Registrar asignaciones manuales en ocupacion
-    for v in enriched:
-        if v['placa'] in manual_overrides:
-            dia_manual = manual_overrides[v['placa']]
-            # Only count if the manual override is within the selected range (optional, but good for tracking)
-            ocupacion[dia_manual] = ocupacion.get(dia_manual, 0) + 1
-
-    for v in enriched:
-        hora_dow = v.get('horaDow', {})
-
-        is_manual = v['placa'] in manual_overrides
-        assigned = None
-        if is_manual:
-            assigned = manual_overrides[v['placa']]
-
-        if not is_manual and (v['bestDow'] is None or not hora_dow):
-            result.append({
-                **v,
-                'diaAsignado':   None,
-                'razon':         'Sin registros de llegada válidos',
-                'horaMejorDia':  'N/D',
-                'finEstimado3h': 'N/D',
-                'finEstimado4h': 'N/D',
-                'turno':         None,
-            })
-            continue
-
-        if not assigned:
-            # Buscar fechas que coincidan con el mejor día de la semana dentro del rango
-            candidatos = fechas_por_dow.get(v['bestDow'], [])
-            
-            # Intentar asignar en un candidato con cupo
-            for dia in candidatos:
-                if ocupacion.get(dia, 0) < max_por_dia:
-                    assigned = dia
-                    break
-
-            # Desbordamiento: buscar cualquier día libre en el rango seleccionado
-            if not assigned:
-                for dia in fechas:
-                    if ocupacion.get(dia, 0) < max_por_dia:
-                        assigned = dia
-                        break
-
-            if assigned:
-                ocupacion[assigned] = ocupacion.get(assigned, 0) + 1
-
-        best_entry = hora_dow.get(str(v['bestDow'])) or hora_dow.get(v['bestDow']) or {}
+    def build_result_entry(v: dict, assigned: str | None, best_dow: int | None,
+                           best_min: int, razon: str | None = None) -> dict:
+        hora_dow  = v.get('horaDow', {})
+        best_entry = hora_dow.get(str(best_dow)) if best_dow is not None else {}
+        best_entry = best_entry or hora_dow.get(best_dow) or {}
         best_mins  = best_entry.get('m', 0)
         fin3h      = best_mins + WASH_HOURS * 60
         fin4h      = best_mins + (WASH_HOURS + 1) * 60
-
-        result.append({
+        return {
             **v,
+            'bestDow':       best_dow,
+            'bestMin':       best_min,
             'diaAsignado':   assigned,
-            'razon':         None,
+            'razon':         razon,
             'horaMejorDia':  best_entry.get('s', 'N/D'),
             'finEstimado3h': mins_to_str(fin3h) if best_mins else 'N/D',
             'finEstimado4h': mins_to_str(fin4h) if best_mins else 'N/D',
             'turno':         turno_info(best_mins) if best_mins else None,
+        }
+
+    # ─── Separar manuales de automáticos ─────────────────────────────────
+    manual_overrides = manual_overrides or {}
+    vehs_manuales = [v for v in vehiculos if v['placa'] in manual_overrides]
+    vehs_auto     = [v for v in vehiculos if v['placa'] not in manual_overrides]
+
+    total_auto = len(vehs_auto)
+    total_dias = len(fechas)
+
+    # ─── Presupuesto equitativo ────────────────────────────────────────────
+    # base: cuántos van en cada día; los primeros `resto` días llevan 1 extra
+    if total_auto > 0 and total_dias > 0:
+        base  = total_auto // total_dias
+        resto = total_auto % total_dias
+        budget: dict[str, int] = {}
+        for i, f in enumerate(fechas):
+            b = base + (1 if i < resto else 0)
+            budget[f] = min(b, max_por_dia)
+    else:
+        budget = {f: 0 for f in fechas}
+
+    # Descontar asignaciones manuales del presupuesto
+    for v in vehs_manuales:
+        dia = manual_overrides[v['placa']]
+        if dia in budget:
+            budget[dia] = max(0, budget[dia] - 1)
+
+    # ─── Enriquecer vehículos automáticos ────────────────────────────────
+    enriched = []
+    for v in vehs_auto:
+        best_dow, best_min = get_best_dow(v)
+        n_registros = sum(
+            e.get('n', 0) for e in v.get('horaDow', {}).values()
+        )
+        enriched.append({
+            **v,
+            'bestDow':    best_dow,
+            'bestMin':    best_min,
+            'nRegistros': n_registros,
         })
 
-    return result
+    # Ordenar: primero los que tienen más registros (más confianza en su bestDow),
+    # luego por cuántos días del rango coinciden con su bestDow (menos opciones → asignar antes)
+    def sort_key(v):
+        has_data    = 1 if v['bestDow'] is not None else 0
+        n_opciones  = len(fechas_por_dow.get(v['bestDow'], [])) if v['bestDow'] is not None else 999
+        return (-has_data, n_opciones, v['bestMin'])
+
+    enriched.sort(key=sort_key)
+
+    # ─── Función de asignación ─────────────────────────────────────────────
+    ocupacion: dict[str, int] = {}
+    # Inicializar ocupacion con los días manuales
+    for v in vehs_manuales:
+        dia = manual_overrides[v['placa']]
+        ocupacion[dia] = ocupacion.get(dia, 0) + 1
+
+    def asignar(best_dow: int | None) -> str | None:
+        """
+        Busca el mejor día disponible:
+        1. Fechas del bestDow con presupuesto libre (ordenadas por cuota restante desc)
+        2. Cualquier fecha con presupuesto libre (ordenadas por cuota restante desc)
+        3. Si el presupuesto está agotado, la fecha menos cargada (overflow mínimo)
+        """
+        def cuota_restante(f: str) -> int:
+            return budget.get(f, 0) - ocupacion.get(f, 0)
+
+        # 1. Candidatos del mejor día de la semana con cupo
+        if best_dow is not None:
+            candidatos = [
+                (cuota_restante(f), f)
+                for f in fechas_por_dow.get(best_dow, [])
+                if cuota_restante(f) > 0
+            ]
+            if candidatos:
+                candidatos.sort(key=lambda x: -x[0])
+                return candidatos[0][1]
+
+        # 2. Cualquier fecha con cupo
+        todos = [(cuota_restante(f), f) for f in fechas if cuota_restante(f) > 0]
+        if todos:
+            todos.sort(key=lambda x: -x[0])
+            return todos[0][1]
+
+        # 3. Overflow: menos cargado (solo si no excede max_por_dia)
+        overflow = [(ocupacion.get(f, 0), f) for f in fechas if ocupacion.get(f, 0) < max_por_dia]
+        if overflow:
+            overflow.sort(key=lambda x: x[0])
+            return overflow[0][1]
+        
+        return None
+
+    # ─── Asignar vehículos automáticos ───────────────────────────────────
+    result_auto = []
+    for v in enriched:
+        assigned = asignar(v['bestDow'])
+        if assigned:
+            ocupacion[assigned] = ocupacion.get(assigned, 0) + 1
+        razon = None if assigned else 'Sin disponibilidad en el rango'
+        result_auto.append(
+            build_result_entry(v, assigned, v['bestDow'], v['bestMin'], razon)
+        )
+
+    # ─── Agregar vehículos con override manual ────────────────────────────
+    result_manuales = []
+    for v in vehs_manuales:
+        best_dow, best_min = get_best_dow(v)
+        assigned = manual_overrides[v['placa']]
+        result_manuales.append(
+            build_result_entry(v, assigned, best_dow, best_min)
+        )
+
+    return result_auto + result_manuales

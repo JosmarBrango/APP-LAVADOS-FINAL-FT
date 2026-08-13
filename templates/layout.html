@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flota Urabá — Panel de Lavados</title>
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="/static/img/icon.svg">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}?v=6">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    // Si la pestaña/app se acaba de abrir (no hay sesión en memoria de pestaña), forzamos logout por seguridad
+    if (!sessionStorage.getItem('session_active')) {
+      window.location.href = '/logout';
+    }
+    window.USER_ROLE = "{{ user.get('role', 'lavador') }}";
+  </script>
+</head>
+
+<body>
+
+  <div class="app">
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" onclick="closeSidebarMobile()"></div>
+
+    <!-- Bottom Navigation (Mobile Only) -->
+    <div class="bottom-nav">
+      <button class="bn-item active"
+        onclick="showView('diagnostico', document.querySelector('.nav-item[onclick*=\'diagnostico\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+        <span class="material-symbols-outlined bn-icon">bar_chart</span><span class="bn-text">Inicio</span>
+      </button>
+      <button class="bn-item"
+        onclick="showView('programacion', document.querySelector('.nav-item[onclick*=\'programacion\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+        <span class="material-symbols-outlined bn-icon">calendar_month</span><span class="bn-text">Prog.</span>
+      </button>
+      <button class="bn-item"
+        onclick="showView('lavados', document.querySelector('.nav-item[onclick*=\'lavados\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+        <span class="material-symbols-outlined bn-icon">local_car_wash</span><span class="bn-text">Lavados</span>
+      </button>
+      <button class="bn-item"
+        onclick="showView('historial', document.querySelector('.nav-item[onclick*=\'historial\']')); document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active')); this.classList.add('active');">
+        <span class="material-symbols-outlined bn-icon">qr_code_scanner</span><span class="bn-text">QR</span>
+      </button>
+      <button class="bn-item"
+        onclick="document.getElementById('sidebar').classList.add('mobile-open'); document.querySelector('.sidebar-overlay').classList.add('open');">
+        <span class="material-symbols-outlined bn-icon">menu</span><span class="bn-text">Menú</span>
+      </button>
+    </div>
+
+    <!-- ═══ SIDEBAR ════════════════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- Brand + Collapse -->
+      <div class="sb-header">
+        <div class="sb-brand">
+          <div class="sb-logo"><span class="material-symbols-outlined" style="font-size: 32px;">local_shipping</span></div>
+          <div class="sb-brand-info">
+            <div class="sb-name">Flota Urabá</div>
+            <div class="sb-sub">Panel de Lavados</div>
+          </div>
+        </div>
+        <button class="sb-collapse-btn" onclick="toggleSidebarCollapse()" title="Colapsar menú">‹</button>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sb-nav">
+
+        <div class="nav-group active">
+          <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+            <span class="ng-text">Vistas</span><span class="ng-arrow">▼</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item active" onclick="showView('diagnostico', this)" data-tooltip="Diagnóstico general">
+              <span class="material-symbols-outlined nav-icon">bar_chart</span><span class="nav-text">Diagnóstico general</span>
+            </button>
+            <button class="nav-item" onclick="showView('promedios', this)" data-tooltip="Promedios por día">
+              <span class="material-symbols-outlined nav-icon">insights</span><span class="nav-text">Promedios por día</span>
+            </button>
+
+            <button class="nav-item" onclick="showView('programacion', this)" data-tooltip="Propuesta de programación">
+              <span class="material-symbols-outlined nav-icon">calendar_month</span><span class="nav-text">Propuesta de programación</span>
+            </button>
+            <button class="nav-item" onclick="showView('vehiculos', this)" data-tooltip="Gestión de vehículos">
+              <span class="material-symbols-outlined nav-icon">local_shipping</span><span class="nav-text">Gestión de vehículos</span>
+            </button>
+
+            <button class="nav-item" onclick="showView('lavados', this)" data-tooltip="Todos los lavados">
+              <span class="material-symbols-outlined nav-icon">local_car_wash</span><span class="nav-text">Todos los lavados</span>
+            </button>
+            <button class="nav-item" onclick="showView('historial', this)" data-tooltip="Historial / Escáner QR">
+              <span class="material-symbols-outlined nav-icon">qr_code_scanner</span><span class="nav-text">Historial / Escáner QR</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-group active">
+          <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+            <span class="ng-text">Métricas</span><span class="ng-arrow">▼</span>
+          </button>
+          <div class="nav-group-items">
+            <button class="nav-item" onclick="showView('reportes', this)" data-tooltip="Centro de Reportes">
+              <span class="material-symbols-outlined nav-icon">description</span><span class="nav-text">Centro de Reportes</span>
+            </button>
+            <button class="nav-item" onclick="showView('personal', this)" data-tooltip="Personal y Rendimiento">
+              <span class="material-symbols-outlined nav-icon">engineering</span><span class="nav-text">Personal y Rendimiento</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="nav-group active">
+          <button class="nav-group-btn" onclick="toggleNavGroup(this)">
+            <span class="ng-text">Herramientas</span><span class="ng-arrow">▼</span>
+          </button>
+          <div class="nav-group-items">
+            {% if user.get('role') == 'admin' %}
+            <button class="nav-item" onclick="openModal('modalImport')" data-tooltip="Importar CSV">
+              <span class="material-symbols-outlined nav-icon">upload_file</span><span class="nav-text">Importar CSV</span>
+            </button>
+            <button class="nav-item" onclick="showView('configuracion', this)" data-tooltip="Configuración">
+              <span class="material-symbols-outlined nav-icon">settings</span><span class="nav-text">Configuración</span>
+            </button>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" data-tooltip="Cerrar sesión"
+              style="text-decoration:none;">
+              <span class="material-symbols-outlined nav-icon" style="color:var(--red)">logout</span><span class="nav-text"
+                style="color:var(--red)">Cerrar sesión</span>
+            </a>
+          </div>
+        </div>
+
+      </nav>
+
+      <!-- Footer Stats -->
+      <div class="sb-footer">
+        <div class="ft-stat"><span class="ft-lbl">Vehículos</span><span class="ft-val" id="ftTotal">—</span></div>
+        <div class="ft-stat"><span class="ft-lbl">Sin lavado gral.</span><span class="ft-val crit"
+            id="ftSinLav">—</span></div>
+        <div class="ft-stat"><span class="ft-lbl">Cumplimiento</span><span class="ft-val crit"
+            id="ftCumplimiento">—</span></div>
+        <div class="ft-stat"><span class="ft-lbl">Realizados</span><span class="ft-val ok" id="ftRealizados">—</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══════════════════════════════════════════════════ -->
+    <main class="main" id="main">
+      <!-- Topbar -->
+      <div class="topbar">
+        <div class="tb-left">
+          <button class="menu-toggle" onclick="openSidebarMobile()">☰</button>
+          <div>
+            <div class="tb-title" id="tbTitle">Diagnóstico general</div>
+            <div class="tb-sub" id="tbSub">Zona Urabá · 0 vehículos</div>
+          </div>
+        </div>
+        <div class="tb-badge" id="tbBadge" style="display:none">
+          <div class="pulse"></div><span id="tbBadgeText">0 lavados generales pendientes</span>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loadingState"
+        style="display:flex;align-items:center;justify-content:center;height:calc(100vh - 64px);color:var(--muted);font-size:15px;gap:12px;">
+        <span style="animation:pulse 1.2s infinite">⏳</span> Cargando datos…
+      </div>
+
+      <!-- Content -->
+      <div class="content" id="mainContent" style="display:none">
+          {% block content %}{% endblock %}
+      </div><!-- /content -->
+    </main>
+  </div>
+
+  <!-- ═══ QR Alert Notification ═══════════════════════════════════ -->
+  <div id="qrAlert" class="qr-alert">
+    <div class="qa-bell">🔔</div>
+    <div class="qa-body">
+      <div class="qa-title">¡Lavado registrado via QR!</div>
+      <div class="qa-detail">
+        Vehículo: <span class="qa-placa" id="qaPlaca">—</span><br>
+        Lavadores: <span id="qaLavador">—</span> · <span id="qaTipo">—</span>
+      </div>
+      <div class="qa-actions">
+        <button class="qa-btn qa-btn-primary" onclick="showView('historial'); closeQrAlert()">Ver historial</button>
+        <button class="qa-btn qa-btn-ghost" onclick="closeQrAlert()">Cerrar</button>
+      </div>
+    </div>
+    <button class="qa-close" onclick="closeQrAlert()">×</button>
+  </div>
+
+  <!-- ═══ MODALS ═══════════════════════════════════════════════════ -->
+  {% block modals %}{% endblock %}
+
+  <!-- Toast -->
+  <div id="toast" class="toast"><span id="toastMsg"></span></div>
+
+  <script src="{{ url_for('static', filename='js/utils.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/api.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/state.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/diagnostico.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/programacion.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/vehiculos.js') }}?v=5"></script>
+  <script src="{{ url_for('static', filename='js/features/lavados.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/historial.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/reportes.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/features/config.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}?v=3"></script>
+  <script>
+    // ── Sidebar: mobile open/close ─────────────────────────────────
+    function openSidebarMobile() {
+      document.getElementById('sidebar').classList.add('mobile-open');
+      document.querySelector('.sidebar-overlay').classList.add('open');
+    }
+    function closeSidebarMobile() {
+      document.getElementById('sidebar').classList.remove('mobile-open');
+      document.querySelector('.sidebar-overlay').classList.remove('open');
+    }
+    // Keep legacy name for any internal calls
+    function toggleSidebar() { openSidebarMobile(); }
+
+    // Close sidebar on mobile when nav item clicked
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (window.innerWidth <= 860) closeSidebarMobile();
+      });
+    });
+
+    // ── Sidebar: desktop collapse ──────────────────────────────────
+    function toggleSidebarCollapse() {
+      const sb = document.getElementById('sidebar');
+      const main = document.getElementById('main');
+      sb.classList.toggle('collapsed');
+      main.classList.toggle('collapsed');
+      localStorage.setItem('sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+    }
+
+    // Restore sidebar state on load
+    if (localStorage.getItem('sb_collapsed') === '1') {
+      document.getElementById('sidebar').classList.add('collapsed');
+      document.getElementById('main').classList.add('collapsed');
+    }
+
+    // ── Sidebar: accordions ────────────────────────────────────────
+    function toggleNavGroup(btn) {
+      const group = btn.parentElement;
+      group.classList.toggle('active');
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+          .then(reg => console.log('SW Registered!', reg.scope))
+          .catch(err => console.log('SW Registration failed', err));
+      });
+    }
+  </script>
+</body>
+
+</html>

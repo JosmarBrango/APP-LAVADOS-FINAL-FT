@@ -1,0 +1,20 @@
+<!-- Modal Importar CSV -->
+<div class="modal-bg" id="modalImport">
+  <div class="modal">
+    <div class="modal-title">Importar base de datos</div>
+    <div class="modal-sub">Sube un archivo CSV con el formato requerido para actualizar toda la flota.</div>
+    <div class="csv-box">
+      <strong>Formato esperado:</strong> Separado por comas o punto y coma.<br>
+      Columnas necesarias:<br>
+      <code>placa</code> <code>municipio</code> <code>tipo</code> <code>ruta</code> <code>supervisor</code>
+      <code>lavados_generales</code> <code>ultimo_lavado</code> <code>hora_dom</code> … <code>hora_sab</code>
+    </div>
+    <form id="formImport" onsubmit="importCSV(event)">
+      <div class="field"><label>Archivo CSV</label><input type="file" id="miFile" accept=".csv" required></div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modalImport')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="miBtn">Procesar e Importar</button>
+      </div>
+    </form>
+  </div>
+</div>

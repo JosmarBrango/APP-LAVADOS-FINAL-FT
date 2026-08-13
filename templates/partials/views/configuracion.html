@@ -1,0 +1,128 @@
+<!-- ─── VISTA: Configuración ──────────────────────────── -->
+{% if user.get('role') == 'admin' %}
+<div id="view-configuracion" class="section">
+  <div class="sec-hdr" style="margin-bottom:28px;">
+    <div class="sec-title" style="font-size:22px;font-weight:800;letter-spacing:-0.02em;">Configuración del
+      Sistema</div>
+    <div style="color:var(--muted);font-size:13px;margin-top:4px;">Administra el acceso y las preferencias de la
+      aplicación.</div>
+  </div>
+
+  <div class="config-tabs"
+    style="display:flex;gap:12px;margin-bottom:24px;border-bottom:1px solid var(--border);">
+    <button class="config-tab active" onclick="switchConfigTab('cuentas', this)"
+      style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:600;color:var(--accent);border-bottom:2px solid var(--accent);cursor:pointer;font-family:var(--sans);">👥
+      Cuentas de Acceso</button>
+    <button class="config-tab" onclick="switchConfigTab('nomina', this)"
+      style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">💸
+      Nómina y Tarifas</button>
+    <button class="config-tab" onclick="switchConfigTab('general', this)"
+      style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">⚙️
+      General</button>
+    <button class="config-tab" onclick="switchConfigTab('avanzado', this)"
+      style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">🛠️
+      Avanzado</button>
+    <button class="config-tab" onclick="switchConfigTab('edicion-lavados', this)"
+      style="background:none;border:none;padding:12px 16px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;font-family:var(--sans);">📝
+      Edición de Lavados</button>
+  </div>
+
+  <div id="tab-cuentas" class="config-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-size:16px;font-weight:700;">Usuarios Registrados</div>
+      <button class="btn btn-primary" onclick="openUserModal()" style="padding:8px 16px;font-size:13px;">➕ Nuevo
+        Usuario</button>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Nombre</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th style="text-align:right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-nomina" class="config-panel" style="display:none;">
+    <div
+      style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm); margin-bottom: 24px;">
+      <div style="font-weight:600;margin-bottom:12px;font-size:16px;">Tarifas de Pago a Lavadores</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Configura el valor a pagar a cada lavador
+        por cada tipo de lavado. Este valor se usará para calcular la nómina estimada automáticamente.</p>
+      <form id="formTarifas" onsubmit="saveTarifas(event)">
+        <div class="field-row">
+          <div class="field">
+            <label>PAGO POR LAVADO GENERAL</label>
+            <div class="input-money"><input type="text" class="money-input" id="tarifaGeneral" placeholder="$ 0"
+                required></div>
+          </div>
+          <div class="field">
+            <label>PAGO POR LAVADO SENCILLO</label>
+            <div class="input-money"><input type="text" class="money-input" id="tarifaSencillo"
+                placeholder="$ 0" required></div>
+          </div>
+          <div class="field">
+            <label>PAGO POR SOLO ENJUAGUE</label>
+            <div class="input-money"><input type="text" class="money-input" id="tarifaEnjuague"
+                placeholder="$ 0" required></div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:20px;">
+          <button type="submit" class="btn btn-primary">Guardar Tarifas</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="tab-general" class="config-panel" style="display:none;">
+    <div style="font-weight:600;margin-bottom:12px;">Preferencias Globales</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Próximamente: configuración de horas
+      laborales, metas de KPIs, y notificaciones de WhatsApp integradas.</p>
+  </div>
+  
+  <div id="tab-edicion-lavados" class="config-panel" style="display:none;">
+    <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm); margin-bottom: 24px;">
+      <div style="font-weight:600;margin-bottom:12px;font-size:16px;">Editar Fecha de Lavados</div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Busca un lavado por placa y cambia su fecha en caso de algún imprevisto.</p>
+      
+      <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;">
+        <input type="text" id="edLavSearch" placeholder="Buscar por placa..." style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:14px;width:250px;">
+        <button class="btn btn-primary" onclick="buscarLavadosEdicion()" style="padding:9px 16px;font-size:13px;">Buscar</button>
+      </div>
+      
+      <div class="table-wrap">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Placa</th>
+              <th>Fecha Actual</th>
+              <th>Tipo</th>
+              <th>Nueva Fecha</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="edLavBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-avanzado" class="config-panel" style="display:none;">
+  <div
+    style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid var(--border);box-shadow:var(--shadow-sm);">
+    <div style="font-weight:600;margin-bottom:12px;">Gestión de Base de Datos</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Desde aquí podrás exportar copias de
+      seguridad completas de todo el sistema.</p>
+    <button class="btn btn-ghost" style="color:var(--red);border-color:rgba(239,68,68,0.3);">⚠️ Borrar toda la
+      base de datos</button>
+  </div>
+</div>
+</div>
+{% endif %}

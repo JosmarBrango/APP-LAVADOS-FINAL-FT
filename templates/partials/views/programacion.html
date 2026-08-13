@@ -1,0 +1,41 @@
+<!-- ─── VISTA: Programación ───────────────────────────── -->
+<div id="view-programacion" class="section">
+  <div class="filter-bar"
+    style="background:var(--surface);padding:18px;border-radius:var(--radius-lg);margin-bottom:20px;box-shadow:var(--shadow-xs);border:1px solid var(--border);flex-wrap:wrap;gap:16px;align-items:flex-end;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label
+        style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Fecha
+        de Inicio</label>
+      <input type="date" id="progStartDate"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label
+        style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Fecha
+        de Fin</label>
+      <input type="date" id="progEndDate"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label
+        style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Vehículos</label>
+      <select id="progVehiculosFiltro"
+        style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:9px 12px;outline:none;font-family:var(--sans);font-size:13px;"
+        {% if user.get('role') !='admin' %}disabled{% endif %}>
+        <option value="todos">Todos los vehículos</option>
+        <option value="sin_lavado">Solo sin lavados</option>
+      </select>
+    </div>
+    {% if user.get('role') == 'admin' %}
+    <button class="btn btn-primary" onclick="renderProgramacion()" style="padding:10px 20px;">
+      Generar Propuesta
+    </button>
+    {% endif %}
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <button id="toggleUnassignedBtn" class="btn btn-ghost" onclick="toggleUnassigned()"
+      style="padding:7px 14px;font-size:12px;display:none;">Ocultar Sin Asignar</button>
+  </div>
+  <div class="kanban-board" id="progBody">
+  </div>
+</div>
