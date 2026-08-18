@@ -61,6 +61,8 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
+            if request.path.startswith('/api/') or request.is_json:
+                return jsonify({'error': 'Sesión no iniciada o expirada'}), 401
             return redirect(url_for('auth.login', next=request.url))
         return f(*args, **kwargs)
     return decorated_function

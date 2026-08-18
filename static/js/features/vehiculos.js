@@ -40,15 +40,42 @@ function renderVehiculos() {
 }
 
 function editVehicle(placa) {
-  const v = window.state.vehiculos.find(x => x.placa === placa);
+  const v = window.state.vehiculos.find(x => (x.placa || '').toUpperCase() === (placa || '').toUpperCase());
   if (!v) return;
-  window.state.editTarget = placa;
+  window.state.editTarget = v.placa;
   document.getElementById('mvTitle').textContent = 'Editar vehículo';
   document.getElementById('mvSub').textContent = 'Modifica los datos del vehículo.';
-  document.getElementById('mvPlaca').value = v.placa;
-  document.getElementById('mvPlaca').disabled = true;
-  document.getElementById('mvMun').value = v.mun;
-  document.getElementById('mvTipo').value = v.tipo;
+  
+  const placaEl = document.getElementById('mvPlaca');
+  placaEl.value = v.placa;
+  placaEl.disabled = true;
+  
+  document.getElementById('mvMun').value = v.mun || '';
+  
+  const tipoEl = document.getElementById('mvTipo');
+  const vTipo = (v.tipo || '').trim();
+  
+  if (vTipo) {
+    let found = false;
+    for (let i = 0; i < tipoEl.options.length; i++) {
+      if (tipoEl.options[i].value.toUpperCase() === vTipo.toUpperCase() || 
+          tipoEl.options[i].text.toUpperCase() === vTipo.toUpperCase()) {
+        tipoEl.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const opt = document.createElement('option');
+      opt.value = vTipo;
+      opt.textContent = vTipo;
+      tipoEl.appendChild(opt);
+      tipoEl.value = vTipo;
+    }
+  } else {
+    tipoEl.value = '';
+  }
+  
   document.getElementById('mvRuta').value = v.ruta || '';
   document.getElementById('mvSup').value = v.sup || '';
   window.openModal('modalVehicle');
@@ -56,19 +83,36 @@ function editVehicle(placa) {
 
 async function saveVehicle(e) {
   e.preventDefault();
+  const placa = (window.state.editTarget || document.getElementById('mvPlaca').value).trim().toUpperCase();
+  const mun = document.getElementById('mvMun').value.trim();
+  const tipo = document.getElementById('mvTipo').value.trim();
+  const ruta = document.getElementById('mvRuta').value.trim();
+  const sup = document.getElementById('mvSup').value.trim();
+
+  if (!placa) {
+    window.showToast("La placa es obligatoria");
+    return;
+  }
+  if (!tipo) {
+    window.showToast("Por favor selecciona un tipo de vehículo");
+    return;
+  }
+
   const v = {
-    placa: document.getElementById('mvPlaca').value.toUpperCase(),
-    mun: document.getElementById('mvMun').value,
-    tipo: document.getElementById('mvTipo').value,
-    ruta: document.getElementById('mvRuta').value,
-    sup: document.getElementById('mvSup').value
+    placa,
+    mun,
+    tipo,
+    ruta,
+    sup
   };
+
   try {
-    const res = await window.apiCall('/api/vehiculo', window.state.editTarget ? 'PUT' : 'POST', v);
-    window.showToast(`Vehículo ${window.state.editTarget ? 'actualizado' : 'agregado'}`);
+    await window.apiCall('/api/vehiculo', window.state.editTarget ? 'PUT' : 'POST', v);
+    window.showToast(`Vehículo ${window.state.editTarget ? 'actualizado' : 'agregado'} con éxito`);
     window.closeModal('modalVehicle');
-    await refreshAllData();
+    await window.refreshAllData();
   } catch (err) {
+    // apiCall maneja el toast y el log en consola
   }
 }
 
@@ -77,9 +121,9 @@ async function deleteVehicle(placa) {
   document.getElementById('mcBtn').onclick = async () => {
     try {
       await window.apiCall('/api/vehiculo', 'DELETE', { placa });
-      window.showToast("Vehículo eliminado");
+      window.showToast("Vehículo eliminado correctamente");
       window.closeModal('modalConfirm');
-      await refreshAllData();
+      await window.refreshAllData();
     } catch (e) {}
   };
   window.openModal('modalConfirm');
@@ -90,8 +134,10 @@ function openVehicleModal() {
   document.getElementById('mvTitle').textContent = 'Agregar vehículo';
   document.getElementById('mvSub').textContent = 'Ingresa los datos del nuevo vehículo.';
   document.getElementById('formVehicle').reset();
-  document.getElementById('mvPlaca').readOnly = false;
-  document.getElementById('mvPlaca').disabled = false;
+  const placaEl = document.getElementById('mvPlaca');
+  placaEl.readOnly = false;
+  placaEl.disabled = false;
+  document.getElementById('mvTipo').value = '';
   window.openModal('modalVehicle');
 }
 
