@@ -128,16 +128,26 @@ def process_csv(filepath):
     # Metadatos por placa (valor más frecuente)
     def mode_val(series):
         m = series.mode()
-        return str(m.iloc[0]) if len(m) > 0 else 'N/D'
+        return str(m.iloc[0]) if len(m) > 0 else ''
 
-    # Valores de municipio que no son válidos (números, vacíos, horas mal leídas)
-    _INVALID_MUNS = {'', '0', '0.0', '0:00', '00:00', 'nan', 'none', 'n/d'}
+    # Valores de texto que no son válidos (números, vacíos, horas mal leídas)
+    _INVALID_STRS = {'', '0', '0.0', '0:00', '00:00', 'nan', 'none', 'n/d', 'null', 'undefined'}
+
+    def clean_str(val) -> str:
+        if pd.isna(val):
+            return ''
+        s = str(val).strip()
+        if s.lower() in _INVALID_STRS:
+            return ''
+        return s.upper()
 
     def clean_mun(val) -> str:
-        """Devuelve 'N/D' si el valor de municipio es inválido o no reconocible."""
+        """Devuelve '' si el valor de municipio es inválido o no reconocible."""
+        if pd.isna(val):
+            return ''
         s = str(val).strip()
-        if s.lower() in _INVALID_MUNS or s.replace(':', '').replace('.', '').isdigit():
-            return 'N/D'
+        if s.lower() in _INVALID_STRS or s.replace(':', '').replace('.', '').isdigit():
+            return ''
         return s.upper()
 
     sup_map  = df.groupby('PLACA')['SUPERVISOR'].agg(mode_val)        if 'SUPERVISOR'      in df.columns else pd.Series(dtype=str)
@@ -175,11 +185,11 @@ def process_csv(filepath):
     else:
         hora_gral = 0
 
-    # Promedio llegada por municipio (excluir municipios inválidos o N/D)
+    # Promedio llegada por municipio (excluir municipios inválidos)
     df_lav['MUN'] = df_lav['PLACA'].map(mun_map).apply(
-        lambda x: clean_mun(x) if pd.notna(x) else 'N/D'
+        lambda x: clean_mun(x) if pd.notna(x) else ''
     )
-    df_lav_mun_valido = df_lav[df_lav['MUN'] != 'N/D']
+    df_lav_mun_valido = df_lav[df_lav['MUN'] != '']
     mun_avg = (
         df_lav_mun_valido.groupby('MUN')['HORA_LAV_MIN']
         .mean()
@@ -205,11 +215,11 @@ def process_csv(filepath):
     for placa in placas:
         veh = {
             'placa':    placa,
-            'mun':      clean_mun(mun_map.get(placa, 'N/D')),
-            'tipo':     tipo_map.get(placa, 'N/D'),
-            'ruta':     str(ruta_map.get(placa, 'N/D')),
+            'mun':      clean_mun(mun_map.get(placa, '')),
+            'tipo':     clean_str(tipo_map.get(placa, '')),
+            'ruta':     clean_str(ruta_map.get(placa, '')),
             'pctRural': int(pct_rural.get(placa, 0)),
-            'sup':      sup_map.get(placa, 'N/D'),
+            'sup':      clean_str(sup_map.get(placa, '')),
             'lavGen':   0,
             'ultimo':   'NUNCA',
             'horaDow':  {}

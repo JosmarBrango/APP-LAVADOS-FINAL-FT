@@ -52,12 +52,32 @@ function closeModal(id) {
   }
 }
 
+const INVALID_VALUES = new Set([
+  'N/D', 'ND', 'N/A', 'NA', '0:00', '00:00', '0', '0.0', '0.00', 'NAN', 'NONE', 'NULL', 'UNDEFINED', ''
+]);
+
+function isInvalidVal(val) {
+  if (val === null || val === undefined) return true;
+  const s = String(val).trim().toUpperCase();
+  return INVALID_VALUES.has(s);
+}
+
+function formatVal(val, placeholder = '---------------') {
+  if (isInvalidVal(val)) {
+    return `<span style="color:var(--muted);font-family:var(--mono);letter-spacing:1px;opacity:0.6">${placeholder}</span>`;
+  }
+  return String(val).trim();
+}
+
 // ─── Exportar al window para uso global ─────────────────────────────────────────
 window.DOW = DOW;
 window.DOW_FULL = DOW_FULL;
 window.CUTOFF = CUTOFF;
 window.NOMBRES_MESES = NOMBRES_MESES;
 window.INVALID_MUNS = INVALID_MUNS;
+window.INVALID_VALUES = INVALID_VALUES;
+window.isInvalidVal = isInvalidVal;
+window.formatVal = formatVal;
 window.m2s = m2s;
 window.getBestDay = getBestDay;
 window.cellCls = cellCls;

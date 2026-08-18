@@ -5,7 +5,7 @@ function renderVehiculos() {
 
   let data = [...window.state.vehiculos];
   if (window.state.filterMunVeh) data = data.filter(v => v.mun === window.state.filterMunVeh);
-  if (window.state.searchVeh) data = data.filter(v => v.placa.toLowerCase().includes(window.state.searchVeh));
+  if (window.state.searchVeh) data = data.filter(v => (v.placa || '').toLowerCase().includes(window.state.searchVeh));
 
   const countEl = document.getElementById('vehCount');
   if (countEl) countEl.textContent = `${data.length} vehículos`;
@@ -15,13 +15,25 @@ function renderVehiculos() {
 
   const isAdmin = window.USER_ROLE === 'admin';
 
-  bodyEl.innerHTML = data.map(v => `
+  bodyEl.innerHTML = data.map(v => {
+    const munFormatted = window.formatVal(v.mun);
+    const tipoFormatted = window.isInvalidVal(v.tipo) 
+      ? window.formatVal(v.tipo) 
+      : `<span class="badge" style="background:var(--s2);color:var(--text);border:1px solid var(--border)">${v.tipo}</span>`;
+    const rutaFormatted = window.isInvalidVal(v.ruta)
+      ? window.formatVal(v.ruta)
+      : `<span style="font-family:var(--mono);font-size:13px">${v.ruta}</span>`;
+    const supFormatted = window.isInvalidVal(v.sup)
+      ? window.formatVal(v.sup)
+      : `<span style="color:var(--muted);font-size:13px">${v.sup}</span>`;
+
+    return `
     <tr>
       <td><span class="placa">${v.placa}</span></td>
-      <td>${v.mun}</td>
-      <td><span class="badge" style="background:var(--s2);color:var(--text);border:1px solid var(--border)">${v.tipo}</span></td>
-      <td style="font-family:var(--mono);font-size:13px">${v.ruta || '—'}</td>
-      <td style="color:var(--muted);font-size:13px">${v.sup || '—'}</td>
+      <td>${munFormatted}</td>
+      <td>${tipoFormatted}</td>
+      <td>${rutaFormatted}</td>
+      <td>${supFormatted}</td>
       <td style="text-align:right">
         <button class="btn btn-primary" onclick="showQRModal('${v.placa}')" style="padding:6px 12px;font-size:12px;margin-right:6px;display:inline-flex;align-items:center;gap:4px;" title="Ver QR">
           <span class="material-symbols-outlined" style="font-size:16px;">qr_code_2</span> QR
@@ -36,7 +48,8 @@ function renderVehiculos() {
         ` : ''}
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function editVehicle(placa) {
@@ -50,10 +63,10 @@ function editVehicle(placa) {
   placaEl.value = v.placa;
   placaEl.disabled = true;
   
-  document.getElementById('mvMun').value = v.mun || '';
+  document.getElementById('mvMun').value = window.isInvalidVal(v.mun) ? '' : v.mun;
   
   const tipoEl = document.getElementById('mvTipo');
-  const vTipo = (v.tipo || '').trim();
+  const vTipo = window.isInvalidVal(v.tipo) ? '' : (v.tipo || '').trim();
   
   if (vTipo) {
     let found = false;
@@ -76,8 +89,8 @@ function editVehicle(placa) {
     tipoEl.value = '';
   }
   
-  document.getElementById('mvRuta').value = v.ruta || '';
-  document.getElementById('mvSup').value = v.sup || '';
+  document.getElementById('mvRuta').value = window.isInvalidVal(v.ruta) ? '' : v.ruta;
+  document.getElementById('mvSup').value = window.isInvalidVal(v.sup) ? '' : v.sup;
   window.openModal('modalVehicle');
 }
 
