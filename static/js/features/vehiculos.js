@@ -8,42 +8,67 @@ function renderVehiculos() {
   if (window.state.searchVeh) data = data.filter(v => (v.placa || '').toLowerCase().includes(window.state.searchVeh));
 
   const countEl = document.getElementById('vehCount');
-  if (countEl) countEl.textContent = `${data.length} vehículos`;
+  if (countEl) countEl.textContent = `${data.length} vehículo${data.length === 1 ? '' : 's'}`;
 
   const bodyEl = document.getElementById('vehBody');
   if (!bodyEl) return;
 
   const isAdmin = window.USER_ROLE === 'admin';
 
+  if (data.length === 0) {
+    bodyEl.innerHTML = `
+      <tr class="veh-empty-row">
+        <td colspan="6" style="text-align:center;padding:40px 16px;color:var(--muted)">
+          <div style="font-size:36px;margin-bottom:10px;">🔍</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);">No se encontraron vehículos</div>
+          <div style="font-size:13px;margin-top:4px;">Prueba cambiando el filtro de municipio o el término de búsqueda.</div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
   bodyEl.innerHTML = data.map(v => {
     const munFormatted = window.formatVal(v.mun);
     const tipoFormatted = window.isInvalidVal(v.tipo) 
       ? window.formatVal(v.tipo) 
-      : `<span class="badge" style="background:var(--s2);color:var(--text);border:1px solid var(--border)">${v.tipo}</span>`;
+      : `<span class="badge veh-tipo-badge">${v.tipo}</span>`;
     const rutaFormatted = window.isInvalidVal(v.ruta)
       ? window.formatVal(v.ruta)
-      : `<span style="font-family:var(--mono);font-size:13px">${v.ruta}</span>`;
+      : `<span class="veh-ruta-tag">${v.ruta}</span>`;
     const supFormatted = window.isInvalidVal(v.sup)
       ? window.formatVal(v.sup)
-      : `<span style="color:var(--muted);font-size:13px">${v.sup}</span>`;
+      : `<span class="veh-sup-text">${v.sup}</span>`;
 
     return `
-    <tr>
-      <td><span class="placa">${v.placa}</span></td>
-      <td>${munFormatted}</td>
-      <td>${tipoFormatted}</td>
-      <td>${rutaFormatted}</td>
-      <td>${supFormatted}</td>
-      <td style="text-align:right">
-        <button class="btn btn-primary" onclick="showQRModal('${v.placa}')" style="padding:6px 12px;font-size:12px;margin-right:6px;display:inline-flex;align-items:center;gap:4px;" title="Ver QR">
-          <span class="material-symbols-outlined" style="font-size:16px;">qr_code_2</span> QR
+    <tr class="veh-row">
+      <td class="td-placa" data-label="Placa"><span class="placa">${v.placa}</span></td>
+      <td class="td-mun" data-label="Municipio">
+        <span class="veh-label-mob">Municipio</span>
+        <span class="veh-val-mob">${munFormatted}</span>
+      </td>
+      <td class="td-tipo" data-label="Tipo">
+        <span class="veh-label-mob">Tipo</span>
+        <span class="veh-val-mob">${tipoFormatted}</span>
+      </td>
+      <td class="td-ruta" data-label="Ruta">
+        <span class="veh-label-mob">Ruta</span>
+        <span class="veh-val-mob">${rutaFormatted}</span>
+      </td>
+      <td class="td-sup" data-label="Supervisor">
+        <span class="veh-label-mob">Supervisor</span>
+        <span class="veh-val-mob">${supFormatted}</span>
+      </td>
+      <td class="td-actions" data-label="Acciones">
+        <button class="btn btn-primary btn-veh-action" onclick="showQRModal('${v.placa}')" title="Ver QR">
+          <span class="material-symbols-outlined" style="font-size:17px;">qr_code_2</span> <span>QR</span>
         </button>
         ${isAdmin ? `
-          <button class="btn" onclick="editVehicle('${v.placa}')" style="background:#DBEAFE;color:#1D4ED8;border:1px solid #BFDBFE;padding:6px 12px;font-size:12px;margin-right:6px;display:inline-flex;align-items:center;gap:4px;" title="Editar">
-            <span class="material-symbols-outlined" style="font-size:16px;">edit</span> Editar
+          <button class="btn btn-veh-action btn-veh-edit" onclick="editVehicle('${v.placa}')" title="Editar">
+            <span class="material-symbols-outlined" style="font-size:17px;">edit</span> <span>Editar</span>
           </button>
-          <button class="btn" onclick="deleteVehicle('${v.placa}')" style="background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" title="Borrar">
-            <span class="material-symbols-outlined" style="font-size:16px;">delete</span> Borrar
+          <button class="btn btn-veh-action btn-veh-delete" onclick="deleteVehicle('${v.placa}')" title="Borrar">
+            <span class="material-symbols-outlined" style="font-size:17px;">delete</span> <span>Borrar</span>
           </button>
         ` : ''}
       </td>

@@ -2,15 +2,20 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#FFFFFF">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F8FAFC">
   <title>Registrar Lavado{% if vehiculo %} — {{ vehiculo.placa }}{% endif %}</title>
   <link rel="manifest" href="/static/manifest.json">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
     :root {
       --bg:      #F8FAFC;
       --card:    #FFFFFF;
@@ -22,7 +27,7 @@
       --gold:    #F59E0B;
       --blue:    #0EA5E9;
       --red:     #EF4444;
-      --sans: 'Plus Jakarta Sans', sans-serif;
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     body {
       background: var(--bg);
@@ -32,73 +37,93 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 16px 60px;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(40px, env(safe-area-inset-bottom));
     }
     .logo-bar {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 20px;
-      font-size: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      font-weight: 500;
       color: var(--muted);
-      letter-spacing: .03em;
+      letter-spacing: .02em;
     }
-    .logo-bar .emoji { font-size: 18px; }
+    .logo-bar .emoji { font-size: 20px; }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 22px;
+      border-radius: 24px;
       padding: 28px 24px;
       width: 100%;
       max-width: 440px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04), 0 4px 10px -2px rgba(0,0,0,0.02);
+    }
+    .badge-placa-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
     }
     .badge-placa {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       background: #F0F9FF;
-      border: 2px solid var(--blue);
-      border-radius: 14px;
-      padding: 12px 22px;
+      border: 2.5px solid var(--blue);
+      border-radius: 16px;
+      padding: 12px 24px;
       font-size: 34px;
       font-weight: 800;
       letter-spacing: .12em;
       color: var(--blue);
       font-family: 'Courier New', monospace;
-      margin-bottom: 10px;
+      width: 100%;
+      text-align: center;
+      box-shadow: inset 0 2px 4px rgba(14, 165, 233, 0.08);
+    }
+    .tipo-tag-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
     }
     .tipo-tag {
-      display: inline-block;
-      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
       color: var(--muted);
       background: var(--card2);
-      padding: 3px 10px;
-      border-radius: 6px;
-      margin-bottom: 22px;
+      padding: 4px 12px;
+      border-radius: 8px;
       border: 1px solid var(--border);
     }
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
     .info-cell {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
     .info-lbl {
-      font-size: 10px;
+      font-size: 10.5px;
+      font-weight: 600;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: .06em;
-      margin-bottom: 3px;
+      letter-spacing: .05em;
+      margin-bottom: 4px;
     }
     .info-val {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 13.5px;
+      font-weight: 700;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
@@ -107,48 +132,56 @@
     .divider {
       height: 1px;
       background: var(--border);
-      margin: 0 0 22px;
+      margin: 0 0 20px;
     }
     .section-title {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: .07em;
+      letter-spacing: .06em;
       margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .field { margin-bottom: 14px; }
+    .field { margin-bottom: 16px; }
     .field label {
       display: block;
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 6px;
-      font-weight: 500;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 7px;
+      font-weight: 600;
     }
     .field input, .field select {
       width: 100%;
+      min-height: 48px;
       background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      font-size: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 16px; /* Evita zoom automático en iPhone/Safari */
       color: var(--text);
       font-family: var(--sans);
       outline: none;
       -webkit-appearance: none;
       appearance: none;
-      transition: border-color .2s;
+      transition: all .2s ease;
     }
     .field select {
-      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
       background-repeat: no-repeat;
       background-position: right 16px top 50%;
-      background-size: 12px auto;
+      background-size: 11px auto;
     }
-    .field input:focus, .field select:focus { border-color: var(--blue); }
+    .field input:focus, .field select:focus {
+      border-color: var(--blue);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 3.5px rgba(14, 165, 233, 0.14);
+    }
 
     /* ── Múltiples lavadores ── */
-    .lavadores-list { display: flex; flex-direction: column; gap: 8px; }
+    .lavadores-list { display: flex; flex-direction: column; gap: 10px; }
     .lavador-row {
       display: flex;
       gap: 8px;
@@ -156,118 +189,166 @@
     }
     .lavador-row select {
       flex: 1;
+      min-height: 48px;
       background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
       padding: 12px 14px;
-      font-size: 15px;
+      font-size: 16px; /* Evita zoom automático */
       color: var(--text);
       font-family: var(--sans);
       outline: none;
       -webkit-appearance: none;
       appearance: none;
-      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
       background-repeat: no-repeat;
-      background-position: right 12px top 50%;
-      background-size: 10px auto;
-      transition: border-color .2s;
+      background-position: right 14px top 50%;
+      background-size: 11px auto;
+      transition: all .2s ease;
     }
-    .lavador-row select:focus { border-color: var(--blue); }
+    .lavador-row select:focus {
+      border-color: var(--blue);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 3.5px rgba(14, 165, 233, 0.14);
+    }
     .btn-remove-lav {
-      width: 38px;
-      height: 38px;
+      width: 48px;
+      height: 48px;
       flex-shrink: 0;
       background: #FEF2F2;
-      border: 1px solid #FECACA;
-      border-radius: 10px;
+      border: 1.5px solid #FECACA;
+      border-radius: 14px;
       color: var(--red);
       font-size: 18px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background .2s;
+      transition: all .2s ease;
     }
-    .btn-remove-lav:hover { background: #FEE2E2; }
+    .btn-remove-lav:active { background: #FEE2E2; transform: scale(0.95); }
     .btn-add-lav {
       width: 100%;
-      padding: 11px;
+      min-height: 46px;
+      padding: 12px;
       background: #F0F9FF;
-      border: 1px dashed var(--blue);
-      border-radius: 12px;
+      border: 1.5px dashed var(--blue);
+      border-radius: 14px;
       color: var(--blue);
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
       font-family: var(--sans);
-      transition: background .2s;
+      transition: all .2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       margin-top: 8px;
     }
-    .btn-add-lav:hover { background: #E0F2FE; }
+    .btn-add-lav:active { background: #E0F2FE; transform: scale(0.98); }
 
     /* ── Tiempos calc ── */
-    .time-row { display: flex; gap: 12px; }
+    .time-row { display: flex; gap: 10px; }
     .time-row > div { flex: 1; }
+    .calc-badge-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
     .calc-badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       background: #F0FDF4;
       border: 1px solid #BBF7D0;
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 12px;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 12.5px;
       font-weight: 600;
       color: #166534;
-      margin-top: 10px;
+      flex: 1;
+      justify-content: center;
     }
 
     .btn-confirm {
       width: 100%;
+      min-height: 56px;
       background: var(--green);
       border: none;
-      border-radius: 14px;
-      padding: 18px;
+      border-radius: 16px;
+      padding: 16px 20px;
       font-size: 17px;
-      font-weight: 700;
+      font-weight: 800;
       color: #fff;
       cursor: pointer;
-      margin-top: 6px;
+      margin-top: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
       font-family: var(--sans);
-      transition: all .2s;
+      transition: all .2s ease;
       letter-spacing: .01em;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+      box-shadow: 0 6px 16px -2px rgba(16, 185, 129, 0.35);
     }
-    .btn-confirm:active { opacity: .85; transform: scale(.98); }
-    .btn-confirm:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-confirm:active { opacity: .88; transform: scale(.98); }
+    .btn-confirm:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
     .alert {
       padding: 14px 16px;
-      border-radius: 12px;
-      font-size: 13px;
+      border-radius: 14px;
+      font-size: 13.5px;
       margin-bottom: 16px;
       line-height: 1.5;
     }
-    .alert.err { background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.25); color: #f85149; }
+    .alert.err { background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.25); color: var(--red); }
     .lav-counter { display: flex; align-items: center; gap: 6px; }
-    .lav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .lav-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
     .lav-dot.empty { background: var(--border); }
     .footer-note {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--muted);
       text-align: center;
-      margin-top: 20px;
-      opacity: .7;
+      margin-top: 24px;
+      opacity: .8;
     }
     .text-red { color: var(--red) !important; }
     .text-green { color: var(--green) !important; }
+
+    /* ── Optimizaciones exclusivas para Celulares ── */
+    @media (max-width: 480px) {
+      body {
+        padding: max(12px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+      }
+      .card {
+        border-radius: 20px;
+        padding: 22px 16px;
+      }
+      .badge-placa {
+        font-size: 29px;
+        padding: 10px 16px;
+        letter-spacing: .1em;
+        border-radius: 14px;
+      }
+      .info-grid {
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .info-cell {
+        padding: 10px 12px;
+        border-radius: 12px;
+      }
+      .info-lbl {
+        font-size: 9.5px;
+      }
+      .info-val {
+        font-size: 12.5px;
+      }
+      .time-row {
+        gap: 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -289,19 +370,21 @@
     <div class="alert err" style="margin-bottom: 20px;">{{ error }}</div>
     {% endif %}
     <!-- Plate & Vehicle Info -->
-    <div>
+    <div class="badge-placa-wrap">
       <div class="badge-placa">{{ vehiculo.placa }}</div>
     </div>
-    <div class="tipo-tag">{{ vehiculo.tipo or 'N/D' }} · {{ vehiculo.ruta or 'N/D' }}</div>
+    <div class="tipo-tag-wrap">
+      <div class="tipo-tag">{{ vehiculo.tipo or '---------------' }} · {{ vehiculo.ruta or '---------------' }}</div>
+    </div>
 
     <div class="info-grid">
       <div class="info-cell">
         <div class="info-lbl">Municipio</div>
-        <div class="info-val">{{ vehiculo.mun or 'N/D' }}</div>
+        <div class="info-val">{{ vehiculo.mun if vehiculo.mun and vehiculo.mun not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '---------------' }}</div>
       </div>
       <div class="info-cell">
         <div class="info-lbl">Supervisor</div>
-        <div class="info-val">{{ vehiculo.sup or 'N/D' }}</div>
+        <div class="info-val">{{ vehiculo.sup if vehiculo.sup and vehiculo.sup not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '---------------' }}</div>
       </div>
       <div class="info-cell">
         <div class="info-lbl">Lavados generales</div>
@@ -363,10 +446,10 @@
 
       <div class="field">
         <label>Municipio donde se encontraba</label>
-        <input type="text" name="municipio" id="inMunicipio" placeholder="Ej: Apartadó, Turbo, Necoclí..." value="{{ vehiculo.mun if vehiculo.mun != 'N/D' else '' }}">
+        <input type="text" name="municipio" id="inMunicipio" placeholder="Ej: Apartadó, Turbo, Necoclí..." value="{{ vehiculo.mun if vehiculo.mun and vehiculo.mun not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '' }}">
       </div>
 
-      <div class="section-title" style="margin-top:8px;">⏱️ Control de tiempos</div>
+      <div class="section-title" style="margin-top:14px;">⏱️ Control de tiempos</div>
 
       <div class="field">
         <label>Hora de llegada al lavadero</label>
@@ -384,13 +467,12 @@
       </div>
 
       <!-- Badge de tiempos calculados en tiempo real -->
-      <div id="calcBadges" style="display:none;">
+      <div id="calcBadges" class="calc-badge-wrap" style="display:none;">
         <div class="calc-badge" id="badgeEspera">⏳ Espera: <strong id="valEspera">—</strong></div>
-        &nbsp;
         <div class="calc-badge" id="badgeLavado">🚿 Lavado: <strong id="valLavado">—</strong></div>
       </div>
 
-      <button type="submit" class="btn-confirm" id="btnConfirm" style="margin-top:20px;">
+      <button type="submit" class="btn-confirm" id="btnConfirm">
         <span style="font-size:20px">✓</span>
         Confirmar Lavado
       </button>

@@ -281,8 +281,28 @@ function showView(id, btnEl) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
   document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-  document.getElementById(`view-${id}`).classList.add('active');
+  const targetView = document.getElementById(`view-${id}`);
+  if (targetView) targetView.classList.add('active');
   document.getElementById('tbTitle').textContent = VIEWS_TITLES[id] || id;
+
+  // Sincronizar barra de navegación inferior móvil
+  const navMap = {
+    'diagnostico': 'Inicio',
+    'programacion': 'Prog.',
+    'lavados': 'Lavados',
+    'historial': 'QR'
+  };
+  document.querySelectorAll('.bn-item').forEach(b => {
+    b.classList.remove('active');
+    const text = b.querySelector('.bn-text')?.textContent.trim();
+    if (navMap[id] && text === navMap[id]) {
+      b.classList.add('active');
+    }
+  });
+
+  if (id === 'diagnostico' && window.renderDiagnostico) window.renderDiagnostico();
+  if (id === 'historial' && window.renderHistorial) window.renderHistorial();
+  if (id === 'vehiculos' && window.renderVehiculos) window.renderVehiculos();
   if (id === 'programacion' && window.initFechasProg) window.initFechasProg();
   if (id === 'personal' && window.renderPersonal) window.renderPersonal();
   if (id === 'lavados' && window.renderTodosLavados) window.renderTodosLavados();

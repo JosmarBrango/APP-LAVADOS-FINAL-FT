@@ -1,20 +1,23 @@
 <!-- Modal Add/Edit Vehicle -->
 <div class="modal-bg" id="modalVehicle">
-  <div class="modal">
+  <div class="modal modal-vehiculo">
     <div class="modal-title" id="mvTitle">Agregar vehículo</div>
     <div class="modal-sub" id="mvSub">Ingresa los datos del nuevo vehículo.</div>
     <form id="formVehicle" onsubmit="saveVehicle(event)">
       <div class="field-row">
-        <div class="field"><label>Placa</label><input type="text" id="mvPlaca" required placeholder="Ej: ABC123">
+        <div class="field">
+          <label>Placa</label>
+          <input type="text" id="mvPlaca" required placeholder="Ej: ABC123">
         </div>
-        <div class="field"><label>Municipio</label><input type="text" id="mvMun" required placeholder="Ej: Apartadó">
+        <div class="field">
+          <label>Municipio</label>
+          <input type="text" id="mvMun" required placeholder="Ej: Apartadó">
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label>Tipo de Vehículo</label>
-          <select id="mvTipo" required
-            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+          <select id="mvTipo" required>
             <option value="" disabled selected>Selecciona...</option>
             <option value="DOBLE TROQUE">DOBLE TROQUE</option>
             <option value="SENCILLO">SENCILLO</option>
@@ -33,11 +36,16 @@
             <option value="DOBLE">DOBLE</option>
           </select>
         </div>
-        <div class="field"><label>Ruta</label><input type="text" id="mvRuta" placeholder="Ej: AR-01"></div>
+        <div class="field">
+          <label>Ruta</label>
+          <input type="text" id="mvRuta" placeholder="Ej: AR-01">
+        </div>
       </div>
-      <div class="field"><label>Supervisor</label><input type="text" id="mvSup" placeholder="Nombre del supervisor">
+      <div class="field">
+        <label>Supervisor</label>
+        <input type="text" id="mvSup" placeholder="Nombre del supervisor">
       </div>
-      <div class="btn-row">
+      <div class="btn-row modal-btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalVehicle')">Cancelar</button>
         <button type="submit" class="btn btn-primary">Guardar vehículo</button>
       </div>

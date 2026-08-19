@@ -1,21 +1,23 @@
 <!-- ─── VISTA: Gestión de Vehículos ───────────────────── -->
 <div id="view-vehiculos" class="section">
-  <div class="filter-bar">
-    <select id="vehMun" onchange="renderVehiculos()">
-      <option value="">Todos los municipios</option>
-    </select>
-    <input id="vehSearch" type="text" placeholder="Buscar placa…" oninput="renderVehiculos()"
-      style="background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--sans);font-size:13px;padding:9px 14px;outline:none;width:160px;">
-    {% if user.get('role') == 'admin' %}
-    <button class="btn btn-primary" onclick="openVehicleModal()"
-      style="padding:9px 18px;font-size:13px;gap:6px;">
-      ➕ Agregar vehículo
-    </button>
-    {% endif %}
-    <span class="tbl-count" id="vehCount">0 vehículos</span>
+  <div class="filter-bar veh-filter-bar">
+    <div class="veh-filters-group">
+      <select id="vehMun" class="veh-select-mun" onchange="renderVehiculos()">
+        <option value="">Todos los municipios</option>
+      </select>
+      <input id="vehSearch" class="veh-search-input" type="text" placeholder="Buscar placa…" oninput="renderVehiculos()">
+    </div>
+    <div class="veh-actions-group">
+      {% if user.get('role') == 'admin' %}
+      <button class="btn btn-primary btn-add-vehicle" onclick="openVehicleModal()">
+        <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> Agregar vehículo
+      </button>
+      {% endif %}
+      <span class="tbl-count veh-count-badge" id="vehCount">0 vehículos</span>
+    </div>
   </div>
-  <div class="table-wrap">
-    <table class="tbl">
+  <div class="table-wrap veh-table-wrap">
+    <table class="tbl tbl-vehiculos">
       <thead>
         <tr>
           <th>Placa</th>
@@ -30,3 +32,4 @@
     </table>
   </div>
 </div>
+

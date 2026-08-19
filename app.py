@@ -25,6 +25,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'default_dev_key_12345')
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Deshabilitar caché estática en desarrollo
 
 # ─── Inicialización ───────────────────────────────────────────────────────────
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

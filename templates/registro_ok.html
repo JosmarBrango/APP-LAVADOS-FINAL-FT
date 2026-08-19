@@ -2,13 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FFFFFF">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#F8FAFC">
   <title>¡Lavado Registrado! — {{ placa }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
     :root {
       --bg:    #F8FAFC;
       --card:  #FFFFFF;
@@ -17,7 +22,7 @@
       --muted: #64748B;
       --green: #10B981;
       --blue:  #0EA5E9;
-      --sans: 'Plus Jakarta Sans', sans-serif;
+      --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     body {
       background: var(--bg);
@@ -28,20 +33,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px 16px;
+      padding: max(20px, env(safe-area-inset-top)) 16px max(30px, env(safe-area-inset-bottom));
     }
     /* ── Checkmark animation ── */
     .check-wrap {
-      width: 90px;
-      height: 90px;
+      width: 84px;
+      height: 84px;
       border-radius: 50%;
-      background: rgba(63,185,80,.12);
-      border: 2px solid var(--green);
+      background: rgba(16, 185, 129, 0.12);
+      border: 2.5px solid var(--green);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 40px;
-      margin: 0 auto 24px;
+      font-size: 38px;
+      color: var(--green);
+      margin: 0 auto 20px;
       animation: popIn .5s cubic-bezier(.175,.885,.32,1.275) both;
     }
     @keyframes popIn {
@@ -52,12 +58,12 @@
     .card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 36px 28px;
+      border-radius: 24px;
+      padding: 32px 24px;
       width: 100%;
       max-width: 400px;
       text-align: center;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04), 0 4px 10px -2px rgba(0,0,0,0.02);
       animation: slideUp .4s ease both;
     }
     @keyframes slideUp {
@@ -73,14 +79,14 @@
     .ok-sub {
       font-size: 14px;
       color: var(--muted);
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       line-height: 1.5;
     }
     /* ── Details grid ── */
     .details {
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 16px;
       padding: 16px;
       margin-bottom: 24px;
       text-align: left;
@@ -89,11 +95,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 0;
+      padding: 8px 0;
     }
     .det-row + .det-row { border-top: 1px solid var(--border); }
-    .det-lbl { font-size: 12px; color: var(--muted); }
-    .det-val { font-size: 13px; font-weight: 600; color: var(--text); }
+    .det-lbl { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+    .det-val { font-size: 13.5px; font-weight: 700; color: var(--text); }
     /* ── Plate ── */
     .placa-badge {
       display: inline-block;
@@ -102,48 +108,70 @@
       font-weight: 800;
       color: var(--blue);
       letter-spacing: .1em;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     /* ── Buttons ── */
     .btn-back {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
-      background: rgba(88,166,255,.1);
-      border: 1px solid rgba(88,166,255,.3);
-      border-radius: 12px;
+      min-height: 50px;
+      background: #F0F9FF;
+      border: 1.5px solid #BAE6FD;
+      border-radius: 14px;
       padding: 14px;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--blue);
       cursor: pointer;
       text-decoration: none;
       font-family: var(--sans);
-      transition: background .2s;
+      transition: all .2s ease;
     }
-    .btn-back:hover { background: rgba(88,166,255,.18); }
+    .btn-back:active { background: #E0F2FE; transform: scale(0.98); }
     .btn-close {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       width: 100%;
+      min-height: 48px;
       background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 15px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 14.5px;
       font-weight: 600;
       color: var(--muted);
       cursor: pointer;
       text-decoration: none;
       font-family: var(--sans);
-      transition: all .2s;
-      margin-top: 12px;
+      transition: all .2s ease;
+      margin-top: 10px;
     }
-    .btn-close:hover {
+    .btn-close:active {
       background: #F1F5F9;
       color: var(--text);
+      transform: scale(0.98);
     }
     .logo-bar {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--muted); margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: max(16px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
+      }
+      .card {
+        border-radius: 20px;
+        padding: 26px 18px;
+      }
     }
   </style>
 </head>
