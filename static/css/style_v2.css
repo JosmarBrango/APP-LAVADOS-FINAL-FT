@@ -1849,10 +1849,8 @@ body {
     overflow-x: hidden;
   }
 
-  /* Las tablas sí pueden hacer scroll horizontal */
-  .table-wrap,
-  .hist-table-wrap,
-  .veh-table-wrap {
+  /* Las tablas tradicionales sí pueden hacer scroll horizontal */
+  .table-wrap {
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
@@ -3047,212 +3045,251 @@ body {
 /* ── Reglas Mobile para Gestión de Vehículos ── */
 @media (max-width: 768px) {
   #view-vehiculos {
-    overflow-x: hidden;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos .veh-filter-bar {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    margin-bottom: 16px;
-    width: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos .veh-filters-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
-  #view-vehiculos .veh-select-mun {
-    width: 100%;
-    min-height: 48px;
-    font-size: 16px;
-    border-radius: 12px;
-    padding: 10px 14px;
-  }
+  #view-vehiculos .veh-select-mun,
   #view-vehiculos .veh-search-input {
-    width: 100%;
-    min-height: 48px;
-    font-size: 16px;
-    border-radius: 12px;
-    padding: 10px 14px;
+    width: 100% !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos .veh-actions-group {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos .btn-add-vehicle {
-    flex: 1;
-    min-height: 46px;
-    font-size: 14px;
-    font-weight: 700;
-    border-radius: 14px;
-    justify-content: center;
+    flex: 1 !important;
+    min-height: 44px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
   }
   #view-vehiculos .veh-count-badge {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 8px 12px;
-    background: var(--s2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    white-space: nowrap;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 8px 12px !important;
+    background: var(--s2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    white-space: nowrap !important;
   }
 
-  /* Transformar tabla a tarjetas móviles */
+  /* Contenedor de tarjetas móviles */
   #view-vehiculos .veh-table-wrap {
-    background: transparent;
-    border: none;
-    padding: 0;
-    box-shadow: none;
-    overflow: visible;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos table.tbl-vehiculos {
-    display: block;
-    width: 100%;
-    border: none;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
   }
   #view-vehiculos table.tbl-vehiculos thead {
-    display: none;
+    display: none !important;
   }
   #view-vehiculos table.tbl-vehiculos tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
+
+  /* Tarjeta móvil para cada vehículo */
   #view-vehiculos table.tbl-vehiculos tr.veh-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 14px;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    width: 100%;
-    overflow: hidden;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-areas:
+      "placa tipo"
+      "mun ruta"
+      "sup sup"
+      "actions actions" !important;
+    row-gap: 10px !important;
+    column-gap: 12px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 16px !important;
+    padding: 14px 16px !important;
+    box-shadow: var(--shadow-sm) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row:active {
-    transform: scale(0.985);
+    transform: scale(0.99);
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td {
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    border: none;
-    background: transparent;
-    min-width: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
+
+  /* Header tarjeta: Placa (izq) y Tipo (der) */
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-placa {
-    grid-column: 1 / 2;
-    align-items: flex-start;
-    justify-content: center;
+    grid-area: placa !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-placa .placa {
-    font-size: 17px;
-    font-weight: 800;
-    padding: 6px 12px;
-    border-radius: 10px;
-    display: inline-block;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    padding: 5px 12px !important;
+    border-radius: 10px !important;
+    display: inline-block !important;
+    letter-spacing: 0.5px !important;
   }
+
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-tipo {
-    grid-column: 2 / 3;
-    align-items: flex-end;
-    justify-content: center;
+    grid-area: tipo !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-tipo .veh-label-mob {
-    display: none;
+    display: none !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-tipo .veh-tipo-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 5px 8px;
-    border-radius: 8px;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
+
+  /* Fila 2: Municipio y Ruta en recuadros simétricos */
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-mun {
-    grid-column: 1 / 2;
-    background: none;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
+    grid-area: mun !important;
+    background: var(--s2) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    min-height: 48px !important;
+    justify-content: center !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-ruta {
-    grid-column: 2 / 3;
-    background: none;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-    align-items: flex-end;
+    grid-area: ruta !important;
+    background: var(--s2) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    min-height: 48px !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
   }
+
+  /* Fila 3: Supervisor en recuadro completo */
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-sup {
-    grid-column: 1 / 3;
-    background: none;
-    padding: 0;
-    border: none;
-    border-radius: 0;
+    grid-area: sup !important;
+    background: var(--s2) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border) !important;
+    min-height: 48px !important;
+    justify-content: center !important;
   }
+
+  /* Labels de los campos */
   #view-vehiculos table.tbl-vehiculos tr.veh-row .veh-label-mob {
-    display: block;
-    font-size: 9px;
-    font-weight: 800;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-bottom: 3px;
+    display: block !important;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: var(--muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    margin-bottom: 2px !important;
   }
+
+  /* Valores de los campos */
   #view-vehiculos table.tbl-vehiculos tr.veh-row .veh-val-mob {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
   }
+
+  /* Fila 4: Acciones (botones) */
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-actions {
-    grid-column: 1 / 3;
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border);
-    width: 100%;
-    justify-content: flex-start;
+    grid-area: actions !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    margin-top: 2px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid var(--border) !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-actions .btn {
-    width: 40px;
-    height: 40px;
-    min-height: 0;
-    padding: 0;
-    font-size: 0;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
+    width: 40px !important;
+    height: 40px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    font-size: 0 !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
     margin: 0 !important;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-actions .btn .material-symbols-outlined {
     font-size: 20px !important;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-actions .btn span:not(.material-symbols-outlined) {
-    display: none;
+    display: none !important;
   }
 
   /* Modales en móvil */
@@ -3518,25 +3555,36 @@ body {
 
   /* Transformar tabla a tarjetas móviles */
   #view-historial .hist-table-wrap {
-    background: transparent;
-    border: none;
-    padding: 0;
-    box-shadow: none;
-    overflow: visible;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   #view-historial table.tbl-historial {
-    display: block;
-    width: 100%;
-    border: none;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
   }
   #view-historial table.tbl-historial thead {
-    display: none;
+    display: none !important;
   }
   #view-historial table.tbl-historial tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
   #view-historial table.tbl-historial tr.hist-row {
     display: flex;
