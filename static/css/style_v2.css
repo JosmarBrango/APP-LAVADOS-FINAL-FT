@@ -1524,7 +1524,7 @@ body {
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 300;
+  z-index: 9999;  /* Alto z-index para asegurarse que esté sobre todo */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1536,6 +1536,7 @@ body {
   gap: 12px;
   box-shadow: var(--shadow-lg);
   color: var(--text);
+  max-width: calc(100vw - 32px);
 }
 
 .toast.open {
@@ -1561,6 +1562,19 @@ body {
 
 .toast.err {
   border-left: 4px solid var(--red);
+}
+
+/* En mobile: toast encima de la bottom nav y centrado horizontalmente */
+@media (max-width: 860px) {
+  .toast {
+    bottom: calc(72px + env(safe-area-inset-bottom) + 12px);
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: calc(100vw - 32px);
+    text-align: left;
+    justify-content: flex-start;
+  }
 }
 
 /* ── QR Alert Notification ────────────────────────────────── */
@@ -1824,7 +1838,24 @@ body {
   /* El contenido tiene padding inferior para NO quedar tapado por la barra fija */
   .content {
     padding: 16px 16px calc(72px + env(safe-area-inset-bottom)) !important;
-    overflow-x: hidden !important;    /* Evita scroll horizontal */
+    /* overflow-x: hidden bloqueaba el scroll en tablas — se elimina */
+    overflow-x: visible !important;
+    max-width: 100vw;
+  }
+
+  /* Evitar que las secciones se desborden del viewport */
+  .section {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Las tablas sí pueden hacer scroll horizontal */
+  .table-wrap,
+  .hist-table-wrap,
+  .veh-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
   }
 
   /* Ocultar botón hamburguesa de escritorio */
@@ -2121,6 +2152,45 @@ body {
 .lav-filter-grow { flex: 1; min-width: 180px; }
 .lav-filter-actions { margin-left: auto; }
 
+/* En móvil: filtros de lavados en columna, ancho completo */
+@media (max-width: 768px) {
+  .lav-filter-panel {
+    padding: 14px 14px;
+  }
+  .lav-filter-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .lav-filter-group {
+    min-width: 0;
+    width: 100%;
+  }
+  .lav-filter-grow {
+    min-width: 0;
+    width: 100%;
+  }
+  .lav-filter-actions {
+    margin-left: 0;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .lav-select {
+    width: 100%;
+    font-size: 16px;  /* Evita zoom automático en iOS */
+    min-height: 44px;
+  }
+  .lav-date-input {
+    width: 100%;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  #lavSearch {
+    font-size: 16px !important;  /* Evita zoom automático en iOS */
+  }
+}
+
 .lav-filter-label {
   font-size: 10px;
   font-weight: 800;
@@ -2332,6 +2402,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.65);
   box-shadow: var(--shadow-sm),
               inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  overflow-x: auto;   /* Scroll horizontal en tabla — evita desbordamiento */
+  -webkit-overflow-scrolling: touch;
 }
 
 
