@@ -3180,32 +3180,37 @@ body {
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-mun {
     grid-column: 1 / 2;
-    background: var(--s2);
-    padding: 9px 11px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
+    background: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-ruta {
     grid-column: 2 / 3;
-    background: var(--s2);
-    padding: 9px 11px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
+    background: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    align-items: flex-end;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-sup {
     grid-column: 1 / 3;
-    background: var(--s2);
-    padding: 9px 11px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
+    background: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row .veh-label-mob {
     display: block;
-    font-size: 9.5px;
-    font-weight: 700;
+    font-size: 9px;
+    font-weight: 800;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
     margin-bottom: 3px;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row .veh-val-mob {
@@ -3216,6 +3221,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
   }
   #view-vehiculos table.tbl-vehiculos tr.veh-row td.td-actions {
     grid-column: 1 / 3;
