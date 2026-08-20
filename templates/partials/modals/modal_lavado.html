@@ -1,8 +1,13 @@
 <!-- Modal Registrar Lavado -->
 <div class="modal-bg" id="modalLavado">
   <div class="modal modal-lavado-form" style="max-width:540px">
-    <div class="modal-title">Registrar lavado</div>
-    <div class="modal-sub">Registra un lavado realizado para actualizar los indicadores.</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px;">
+      <div>
+        <div class="modal-title">Registrar lavado</div>
+        <div class="modal-sub" style="margin-bottom:0;">Registra un lavado realizado para actualizar los indicadores.</div>
+      </div>
+      <button type="button" onclick="closeModal('modalLavado')" style="background:var(--s2);border:1.5px solid var(--border);border-radius:12px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;flex-shrink:0;transition:all 0.15s ease;" title="Cerrar">✕</button>
+    </div>
     <form id="formLavado" onsubmit="saveLavado(event)" class="lav-modal-form">
 
       <!-- Fila 1: Placa + Tipo -->

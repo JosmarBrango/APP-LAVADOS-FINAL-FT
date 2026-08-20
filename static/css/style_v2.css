@@ -1254,12 +1254,14 @@ body {
   inset: 0;
   background: rgba(10, 20, 40, .55);
   backdrop-filter: blur(6px);
-  z-index: 200;
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10000 !important;
   display: none;
   align-items: flex-start;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 40px 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-bg.open {
@@ -3294,16 +3296,25 @@ body {
 
   /* Modales en móvil */
   .modal-bg {
-    padding: max(16px, env(safe-area-inset-top)) 12px max(24px, env(safe-area-inset-bottom));
-    align-items: center;
-    justify-content: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(36px, env(safe-area-inset-bottom)) !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 10000 !important;
   }
   .modal {
-    border-radius: 22px;
-    padding: 24px 18px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
+    border-radius: 22px !important;
+    padding: 22px 18px 28px 18px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 36px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    box-sizing: border-box !important;
+    margin-top: auto !important;
+    margin-bottom: auto !important;
   }
   .modal-vehiculo .field-row {
     display: flex;
@@ -3845,9 +3856,11 @@ body {
   /* Botones uno debajo del otro */
   .lav-btn-row {
     flex-direction: column-reverse;
+    margin-top: 12px !important;
+    padding-bottom: 12px !important;
   }
   .lav-btn-row .btn {
-    min-height: 50px;
+    min-height: 48px;
     font-size: 15px;
   }
 }
