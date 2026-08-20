@@ -1863,9 +1863,46 @@ body {
     display: none !important;
   }
 
-  /* Topbar más compacto */
+  /* Topbar más compacto en móvil */
   .topbar {
     padding: 0 16px;
+    height: auto;
+    min-height: var(--topbar-h);
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .tb-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Título de topbar más pequeño en móvil */
+  .tb-title {
+    font-size: 15px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    background: none !important;
+    -webkit-text-fill-color: var(--text) !important;
+    color: var(--text);
+  }
+
+  .tb-sub {
+    font-size: 11px;
+  }
+
+  /* Badge de alerta: ocupa todo el ancho en segunda línea */
+  .tb-badge {
+    width: 100%;
+    justify-content: center;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    order: 3; /* Va debajo del título */
   }
 
   /* Mostrar barra de navegación inferior */
@@ -1875,23 +1912,33 @@ body {
 }
 
 @media (max-width: 540px) {
+  /* KPIs: grid 2×2 en lugar de scroll horizontal — más legible en móvil */
   .kpi-grid {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px;
-    margin: 0 -16px;
-    padding-left: 16px;
-    padding-right: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    overflow-x: visible;
   }
 
-  .kpi-grid::-webkit-scrollbar {
-    display: none;
+  /* Tarjeta KPI más compacta en móvil */
+  .kpi {
+    padding: 16px 14px;
+    min-width: 0;
   }
 
-  .kpi-card {
-    min-width: 85%;
-    scroll-snap-align: center;
+  .kpi-val {
+    font-size: 26px;
+  }
+
+  .kpi-lbl {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    word-break: break-word;
+  }
+
+  .kpi-s {
+    font-size: 11px;
   }
 
   .filter-bar {
