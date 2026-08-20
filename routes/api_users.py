@@ -14,6 +14,7 @@ from core.auth_helpers import (
     login_required, admin_required,
     load_users, save_users,
     load_config, save_config,
+    get_system_lavadores,
 )
 
 api_users_bp = Blueprint('api_users', __name__)
@@ -22,12 +23,7 @@ api_users_bp = Blueprint('api_users', __name__)
 @api_users_bp.route('/api/lavadores', methods=['GET'])
 @login_required
 def api_get_lavadores():
-    users = load_users()
-    lavadores = [
-        (u.get('name') or u['username']).strip().upper()
-        for u in users
-        if u.get('role') == 'lavador' and u.get('active', True)
-    ]
+    lavadores = get_system_lavadores()
     return jsonify(lavadores)
 
 

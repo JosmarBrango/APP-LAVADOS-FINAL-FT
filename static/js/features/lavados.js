@@ -167,11 +167,27 @@ function renderTodosLavados() {
 
 async function loadModalLavadores() {
   try {
-    const lavadores = window.state.lavadoresSistema || window._LAVADORES_SISTEMA || [];
+    let lavadores = window.state.lavadoresSistema || window._LAVADORES_SISTEMA || [];
+    if (!Array.isArray(lavadores) || lavadores.length === 0) {
+      try {
+        const res = await fetch('/api/lavadores?t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            lavadores = data;
+            window.state.lavadoresSistema = lavadores;
+            window._LAVADORES_SISTEMA = lavadores;
+          }
+        }
+      } catch (e) {
+        console.error('Error obteniendo lavadores para el modal:', e);
+      }
+    }
+
     document.querySelectorAll('.ml-lav-select').forEach(sel => {
       const cur = sel.value;
       sel.innerHTML = '<option value="" disabled selected>Selecciona un lavador...</option>';
-      lavadores.forEach(lav => {
+      (lavadores || []).forEach(lav => {
         const o = document.createElement('option');
         o.value = lav; o.textContent = lav;
         if (lav === cur) o.selected = true;

@@ -54,7 +54,7 @@ function renderHistorial() {
     const horasFmt = (l.hora_inicio || l.hora_fin) ? `${l.hora_inicio || '--:--'} → ${l.hora_fin || '--:--'}` : '---------------';
     const esperaFmt = window._fmtMins(l.tiempo_espera);
     const duracionFmt = window._fmtMins(l.tiempo_lavado);
-    const origenIcon = l.origen === 'qr' ? '📱 QR' : '💻 Panel';
+    const origenIcon = (l.origen === 'qr' || l.origen === 'qr_registro') ? '📱 QR' : '💻 Panel';
 
     return `
     <tr class="hist-row">
@@ -112,22 +112,26 @@ function startQRScanner() {
     let placa = '';
     try {
       const urlParts = decodedText.split('/');
-      placa = urlParts[urlParts.length - 1].toUpperCase();
+      placa = urlParts[urlParts.length - 1].toUpperCase().trim();
     } catch {
-      placa = decodedText.toUpperCase();
+      placa = decodedText.toUpperCase().trim();
     }
     
-    // Abrir modal de lavado con la placa pre-llenada
+    // Abrir modal de lavado inicializando correctamente lavadores y fecha
     if (placa && placa.length >= 5) {
-      window.openModal('modalLavado');
+      if (typeof window.openLavadoModal === 'function') {
+        window.openLavadoModal();
+      } else {
+        window.openModal('modalLavado');
+      }
       setTimeout(() => {
         const mlPlaca = document.getElementById('mlPlaca');
         if (mlPlaca) {
           mlPlaca.value = placa;
-          // Disparar evento input para autocompletar municipio
+          // Disparar evento input para autocompletar municipio si existe
           mlPlaca.dispatchEvent(new Event('input'));
         }
-      }, 200);
+      }, 150);
       window.showToast(`Código escaneado: ${placa}`);
     } else {
       window.showToast("QR no reconocido o placa inválida", 'err');

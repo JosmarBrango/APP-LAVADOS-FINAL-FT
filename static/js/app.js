@@ -51,11 +51,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const elPlaca = document.getElementById('mlPlaca');
   if (elPlaca) {
     elPlaca.addEventListener('input', () => {
-      const placa = elPlaca.value.toUpperCase();
-      const vehiculo = (window.state.vehiculos || []).find(v => v.placa === placa);
+      const placa = elPlaca.value.toUpperCase().trim();
+      const vehiculo = (window.state.vehiculos || []).find(v => (v.placa || '').toUpperCase().trim() === placa);
       const elMun = document.getElementById('mlMunicipio');
       if (elMun) {
-        elMun.value = vehiculo && vehiculo.mun ? vehiculo.mun : '';
+        let mun = (vehiculo && vehiculo.mun) ? String(vehiculo.mun).trim().toUpperCase() : '';
+        const invalid = ['N/D', '0:00', '0', '0.0', 'NAN', 'NONE', 'NULL', 'UNDEFINED', ''];
+        if (invalid.includes(mun)) {
+          mun = '';
+        }
+        elMun.value = mun;
       }
     });
   }

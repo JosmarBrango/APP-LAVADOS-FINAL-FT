@@ -6,7 +6,7 @@ Blueprint para vistas HTML: index principal y registro por QR.
 import datetime as dt
 from flask import Blueprint, render_template, request, session, redirect, url_for
 
-from core.auth_helpers import login_required, load_users
+from core.auth_helpers import login_required, load_users, get_system_lavadores
 from core.stats import get_full_db_data, save_full_db_data, recalcular_stats
 import database
 
@@ -31,20 +31,20 @@ def registro_qr(placa):
             error='El sistema no tiene datos cargados. Contacta al administrador.'
         )
 
-    vehiculo = next((v for v in db_data.get('vehiculos', []) if v['placa'] == placa), None)
+    vehiculo = next((v for v in db_data.get('vehiculos', []) if v.get('placa', '').upper().strip() == placa), None)
     if not vehiculo:
         return render_template(
             'registro.html', vehiculo=None,
             error=f'El vehículo con placa {placa} no fue encontrado en el sistema.'
         )
 
-    # Lista de lavadores del sistema para el formulario
-    users = load_users()
-    lavadores_sistema = [
-        u.get('name', u['username'])
-        for u in users
-        if u.get('role') == 'lavador' and u.get('active', True)
-    ]
+    # Municipio limpio: si no tiene o es inválido, se deja en blanco
+    invalid_muns = {'', '0', '0.0', '0:00', '00:00', 'NAN', 'NONE', 'N/D', 'NULL', 'UNDEFINED'}
+    mun_actual = (vehiculo.get('mun') or '').strip().upper()
+    vehiculo['mun_clean'] = '' if mun_actual in invalid_muns else mun_actual
+
+    # Lista consolidada y garantizada de lavadores del sistema
+    lavadores_sistema = get_system_lavadores(db_data)
 
     if request.method == 'POST':
         fecha        = request.form.get('fecha', '').strip()
@@ -52,18 +52,18 @@ def registro_qr(placa):
         hora_inicio  = request.form.get('hora_inicio', '').strip()
         hora_fin     = request.form.get('hora_fin', '').strip()
         tipo_lavado  = request.form.get('tipo_lavado', '').strip()
-        municipio    = request.form.get('municipio', '').strip()
+        municipio    = request.form.get('municipio', '').strip().upper()
 
-        lavadores = [l.strip() for l in request.form.getlist('lavadores') if l.strip()]
+        lavadores = [l.strip().upper() for l in request.form.getlist('lavadores') if l.strip()]
         if not lavadores:
             lav = request.form.get('lavador', '').strip()
-            lavadores = [lav] if lav else []
+            lavadores = [lav.upper()] if lav else []
 
         if not fecha or not hora_inicio or not hora_fin or not lavadores or not tipo_lavado:
             return render_template(
                 'registro.html', vehiculo=vehiculo,
                 lavadores_sistema=lavadores_sistema,
-                error='Faltan datos obligatorios en el formulario.'
+                error='Faltan datos obligatorios en el formulario (debes seleccionar fecha, horas, tipo de lavado y al menos un lavador).'
             )
 
         if tipo_lavado == 'General':
@@ -92,6 +92,7 @@ def registro_qr(placa):
 
         if municipio:
             vehiculo['mun'] = municipio.upper()
+            database.upsert_vehiculos([vehiculo])
 
         def calc_diff(h1, h2):
             if not h1 or not h2:

@@ -37,7 +37,8 @@ def add_lavado_manual():
     if not db_data:
         return jsonify({'error': 'No hay datos cargados.'}), 400
 
-    vehiculo = next((v for v in db_data.get('vehiculos', []) if v['placa'] == placa), None)
+    placa_norm = (placa or '').strip().upper()
+    vehiculo = next((v for v in db_data.get('vehiculos', []) if v.get('placa', '').upper().strip() == placa_norm), None)
     if not vehiculo:
         return jsonify({'error': f'Vehículo {placa} no encontrado.'}), 404
 
@@ -48,7 +49,8 @@ def add_lavado_manual():
             vehiculo['ultimo'] = f"{parts[2]}/{parts[1]}/{parts[0]}" if len(parts) == 3 else fecha
 
     if municipio:
-        vehiculo['mun'] = municipio.upper()
+        vehiculo['mun'] = municipio.strip().upper()
+        database.upsert_vehiculos([vehiculo])
 
     # Calcular tiempos
     def _calc_diff(h1, h2):

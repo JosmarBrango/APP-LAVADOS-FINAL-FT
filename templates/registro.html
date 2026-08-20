@@ -380,11 +380,11 @@
     <div class="info-grid">
       <div class="info-cell">
         <div class="info-lbl">Municipio</div>
-        <div class="info-val">{{ vehiculo.mun if vehiculo.mun and vehiculo.mun not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '---------------' }}</div>
+        <div class="info-val">{{ vehiculo.mun_clean or '---------------' }}</div>
       </div>
       <div class="info-cell">
         <div class="info-lbl">Supervisor</div>
-        <div class="info-val">{{ vehiculo.sup if vehiculo.sup and vehiculo.sup not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '---------------' }}</div>
+        <div class="info-val">{{ vehiculo.sup if vehiculo.sup and vehiculo.sup not in ['N/D', '0:00', '0', '0.0', 'NAN', 'NONE', ''] else '---------------' }}</div>
       </div>
       <div class="info-cell">
         <div class="info-lbl">Lavados generales</div>
@@ -425,7 +425,7 @@
         <label>Lavadores <span style="color:var(--muted);font-size:11px;">(selecciona todos los que participaron)</span></label>
         <div class="lavadores-list" id="lavadoresList">
           <div class="lavador-row">
-            <select name="lavadores" required>
+            <select name="lavadores" required class="sel-lav-item">
               <option value="" disabled selected>Selecciona un lavador...</option>
               {% for lav in lavadores_sistema %}
               <option value="{{ lav }}">{{ lav }}</option>
@@ -446,7 +446,7 @@
 
       <div class="field">
         <label>Municipio donde se encontraba</label>
-        <input type="text" name="municipio" id="inMunicipio" placeholder="Ej: Apartadó, Turbo, Necoclí..." value="{{ vehiculo.mun if vehiculo.mun and vehiculo.mun not in ['N/D', '0:00', '0', 'NAN', 'NONE', ''] else '' }}">
+        <input type="text" name="municipio" id="inMunicipio" placeholder="Ej: Apartadó, Turbo, Necoclí..." value="{{ vehiculo.mun_clean or '' }}">
       </div>
 
       <div class="section-title" style="margin-top:14px;">⏱️ Control de tiempos</div>
@@ -484,7 +484,37 @@
 
   <script>
     // Lavadores disponibles en el sistema (inyectados desde Python)
-    const LAVADORES_SISTEMA = {{ lavadores_sistema | tojson }};
+    let LAVADORES_SISTEMA = {{ lavadores_sistema | tojson }};
+
+    // Función para refrescar opciones en caso de que lleguen de forma asíncrona
+    async function checkLavadoresSistema() {
+      if (!Array.isArray(LAVADORES_SISTEMA) || LAVADORES_SISTEMA.length === 0) {
+        try {
+          const res = await fetch('/api/lavadores?t=' + Date.now());
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+              LAVADORES_SISTEMA = data;
+              // Actualizar los selects existentes
+              document.querySelectorAll('.sel-lav-item').forEach(sel => {
+                const cur = sel.value;
+                sel.innerHTML = '<option value="" disabled selected>Selecciona un lavador...</option>';
+                LAVADORES_SISTEMA.forEach(lav => {
+                  const opt = document.createElement('option');
+                  opt.value = lav;
+                  opt.textContent = lav;
+                  if (lav === cur) opt.selected = true;
+                  sel.appendChild(opt);
+                });
+              });
+            }
+          }
+        } catch(e) {
+          console.error("Error cargando lavadores:", e);
+        }
+      }
+    }
+    document.addEventListener('DOMContentLoaded', checkLavadoresSistema);
 
     function addLavadorRow(selectedValue) {
       const list = document.getElementById('lavadoresList');
@@ -493,6 +523,7 @@
 
       const sel = document.createElement('select');
       sel.name = 'lavadores';
+      sel.className = 'sel-lav-item';
       sel.innerHTML = `<option value="" disabled ${selectedValue ? '' : 'selected'}>Selecciona un lavador...</option>`;
       LAVADORES_SISTEMA.forEach(lav => {
         const opt = document.createElement('option');
@@ -566,10 +597,45 @@
       if (horaLleg && !horaLleg.value) horaLleg.value = time;
     }
 
+    // Sincronización de registros offline
+    async function syncOfflineLavados() {
+      if (!navigator.onLine) return;
+      const queue = JSON.parse(localStorage.getItem('offlineLavados') || '[]');
+      if (queue.length === 0) return;
+
+      const remaining = [];
+      for (const item of queue) {
+        try {
+          const lavs = (item.lavadores || '').split('||').filter(Boolean);
+          const payload = {
+            placa: item.placa,
+            tipo_lavado: item.tipo_lavado,
+            municipio: item.municipio || '',
+            fecha: item.fecha,
+            hora_llegada: item.hora_llegada || '',
+            hora_inicio: item.hora_inicio || '',
+            hora_fin: item.hora_fin || '',
+            lavadores: lavs
+          };
+          const res = await fetch('/api/lavado/add_manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) remaining.push(item);
+        } catch (e) {
+          remaining.push(item);
+        }
+      }
+      localStorage.setItem('offlineLavados', JSON.stringify(remaining));
+    }
+    window.addEventListener('online', syncOfflineLavados);
+    window.addEventListener('load', syncOfflineLavados);
+
     document.getElementById('formReg')?.addEventListener('submit', function(e) {
         // Validar que al menos 1 lavador esté seleccionado
         const lavSelects = document.querySelectorAll('select[name="lavadores"]');
-        const alguno = [...lavSelects].some(s => s.value);
+        const alguno = [...lavSelects].some(s => s.value && s.value.trim() !== '');
         if (!alguno) {
           e.preventDefault();
           alert('Debes seleccionar al menos un lavador.');
