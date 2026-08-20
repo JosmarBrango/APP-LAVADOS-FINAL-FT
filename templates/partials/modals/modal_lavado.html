@@ -1,20 +1,21 @@
 <!-- Modal Registrar Lavado -->
 <div class="modal-bg" id="modalLavado">
-  <div class="modal" style="max-width:540px">
+  <div class="modal modal-lavado-form" style="max-width:540px">
     <div class="modal-title">Registrar lavado</div>
     <div class="modal-sub">Registra un lavado realizado para actualizar los indicadores.</div>
-    <form id="formLavado" onsubmit="saveLavado(event)">
-      <div class="field-row">
-        <div class="field">
-          <label>Placa del vehículo</label>
-          <input type="text" id="mlPlaca" list="placasList" required placeholder="Ej: ABC123" autocomplete="off"
-            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;text-transform:uppercase;">
+    <form id="formLavado" onsubmit="saveLavado(event)" class="lav-modal-form">
+
+      <!-- Fila 1: Placa + Tipo -->
+      <div class="lav-form-row lav-form-row-2">
+        <div class="lav-form-field">
+          <label class="lav-form-label">Placa del vehículo</label>
+          <input type="text" id="mlPlaca" list="placasList" required placeholder="Ej: ABC123"
+            autocomplete="off" class="lav-form-input" style="text-transform:uppercase;">
           <datalist id="placasList"></datalist>
         </div>
-        <div class="field">
-          <label>Tipo de lavado</label>
-          <select id="mlTipoLavado" required
-            style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+        <div class="lav-form-field">
+          <label class="lav-form-label">Tipo de lavado</label>
+          <select id="mlTipoLavado" required class="lav-form-input lav-form-select">
             <option value="" disabled selected>Selecciona...</option>
             <option value="General">Lavado General</option>
             <option value="Sencillo">Lavado Sencillo</option>
@@ -22,48 +23,66 @@
           </select>
         </div>
       </div>
-      <div class="field">
-        <label>Municipio</label>
-        <input type="text" id="mlMunicipio" placeholder="Ej: Apartadó, Turbo...">
+
+      <!-- Fila 2: Municipio -->
+      <div class="lav-form-field">
+        <label class="lav-form-label">Municipio</label>
+        <input type="text" id="mlMunicipio" placeholder="Ej: Apartadó, Turbo..." class="lav-form-input">
       </div>
-      <!-- Múltiples Lavadores -->
-      <div class="field">
-        <label>Lavadores <span style="color:var(--muted);font-size:11px;font-weight:400">(selecciona todos los que
-            participaron)</span></label>
+
+      <!-- Fila 3: Lavadores -->
+      <div class="lav-form-field">
+        <label class="lav-form-label">Lavadores
+          <span class="lav-form-hint">(selecciona todos los que participaron)</span>
+        </label>
         <div id="mlLavadoresList" style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;gap:8px;align-items:center;" class="lav-row">
-            <select name="mlLavadorSel" class="ml-lav-select"
-              style="flex:1;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
+            <select name="mlLavadorSel" class="ml-lav-select lav-form-input" style="flex:1;">
               <option value="" disabled selected>Selecciona un lavador...</option>
             </select>
           </div>
         </div>
-        <button type="button" id="btnAddMlLavador" onclick="addModalLavRow()"
-          style="margin-top:8px;width:100%;padding:9px;background:var(--s2);border:1px dashed var(--border);border-radius:10px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);">
+        <button type="button" id="btnAddMlLavador" onclick="addModalLavRow()" class="lav-add-lav-btn">
           ＋ Agregar otro lavador
         </button>
       </div>
-      <div class="field">
-        <label>Fecha del lavado <span style="font-size:10px;color:var(--muted);font-weight:600;">(solo se permite la fecha de hoy)</span></label>
-        <input type="date" id="mlFechaVisible" disabled>
+
+      <!-- Fila 4: Fecha -->
+      <div class="lav-form-field">
+        <label class="lav-form-label">Fecha del lavado
+          <span class="lav-form-hint">(solo se permite la fecha de hoy)</span>
+        </label>
+        <input type="date" id="mlFechaVisible" disabled class="lav-form-input lav-date-disabled">
         <input type="hidden" id="mlFecha">
       </div>
-      <!-- 3 tiempos -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div class="field"><label>Llegada lavadero</label><input type="time" id="mlHoraLlegada"></div>
-        <div class="field"><label>Inicio lavado</label><input type="time" id="mlHoraInicio"></div>
-        <div class="field"><label>Fin lavado</label><input type="time" id="mlHoraFin"></div>
+
+      <!-- Fila 5: Horas — 3 campos en grilla 2+1 en mobile -->
+      <div class="lav-form-field">
+        <label class="lav-form-label">Tiempos del lavado</label>
+        <div class="lav-times-grid">
+          <div class="lav-time-field">
+            <span class="lav-time-label">Llegada lavadero</span>
+            <input type="time" id="mlHoraLlegada" class="lav-form-input lav-time-input">
+          </div>
+          <div class="lav-time-field">
+            <span class="lav-time-label">Inicio lavado</span>
+            <input type="time" id="mlHoraInicio" class="lav-form-input lav-time-input">
+          </div>
+          <div class="lav-time-field">
+            <span class="lav-time-label">Fin lavado</span>
+            <input type="time" id="mlHoraFin" class="lav-form-input lav-time-input">
+          </div>
+        </div>
       </div>
+
       <!-- Badge tiempos calculados -->
-      <div id="mlCalcBadges" style="display:none;gap:10px;margin-top:4px;flex-wrap:wrap;">
-        <span
-          style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:#166534;">⏳
-          Espera: <b id="mlValEspera">—</b></span>
-        <span
-          style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:#166534;">🚿
-          Duración: <b id="mlValLavado">—</b></span>
+      <div id="mlCalcBadges" style="display:none;gap:8px;flex-wrap:wrap;">
+        <span class="lav-calc-badge">⏳ Espera: <b id="mlValEspera">—</b></span>
+        <span class="lav-calc-badge">🚿 Duración: <b id="mlValLavado">—</b></span>
       </div>
-      <div class="btn-row" style="margin-top:16px;">
+
+      <!-- Botones -->
+      <div class="btn-row lav-btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalLavado')">Cancelar</button>
         <button type="submit" class="btn btn-em">Registrar lavado</button>
       </div>
