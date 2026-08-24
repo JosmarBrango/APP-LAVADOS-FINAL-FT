@@ -71,18 +71,30 @@ async function loadUsers() {
     const users = await window.apiCall('/api/users');
     const bodyEl = document.getElementById('usersBody');
     if (bodyEl) {
-      bodyEl.innerHTML = users.map(u => `
-        <tr>
-          <td style="font-weight:600">${u.username}</td>
-          <td>${u.name}</td>
-          <td><span class="badge ${u.role === 'admin' ? 'b-ok' : 'b-warn'}">${u.role}</span></td>
-          <td><span class="badge ${u.active ? 'b-ok' : 'b-crit'}">${u.active ? 'Activo' : 'Inactivo'}</span></td>
-          <td style="text-align:right">
-            <button class="act-btn edit" onclick="editUser('${u.username}')">Editar</button>
-            <button class="act-btn del" onclick="deleteUser('${u.username}')">Eliminar</button>
-          </td>
-        </tr>
-      `).join('');
+      bodyEl.innerHTML = users.map(u => {
+        const isLav = u.role === 'lavador';
+        const doc = u.documento ? `<span style="font-family:monospace;font-weight:600;color:var(--text);">${u.documento}</span>` : '<span style="color:var(--muted)">—</span>';
+        const tel = u.telefono ? `<a href="tel:${u.telefono}" style="color:var(--accent);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">call</span>${u.telefono}</a>` : '<span style="color:var(--muted)">—</span>';
+        const roleBadge = isLav ? '<span class="badge b-warn">Lavador</span>' : '<span class="badge b-ok">Admin</span>';
+        const statusBadge = u.active ? '<span class="badge b-ok">Activo</span>' : '<span class="badge b-crit">Inactivo</span>';
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:700;color:var(--text);font-size:13.5px;">${u.name}</div>
+              <div style="font-size:11px;color:var(--muted);">${u.username}</div>
+            </td>
+            <td>${roleBadge}</td>
+            <td>${doc}</td>
+            <td>${tel}</td>
+            <td>${statusBadge}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              <button class="act-btn edit" onclick="editUser('${u.username}')">Editar</button>
+              <button class="act-btn del" onclick="deleteUser('${u.username}')">Eliminar</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
     window._usersCache = users;
   } catch (e) {
@@ -107,11 +119,15 @@ function toggleUserFields() {
 }
 
 function openUserModal() {
-  document.getElementById('muTitle').textContent = 'Nuevo Usuario/Lavador';
-  document.getElementById('muSub').textContent = 'Crea una nueva cuenta o registra un lavador en el sistema.';
+  document.getElementById('muTitle').textContent = 'Nuevo Personal / Lavador';
+  document.getElementById('muSub').textContent = 'Registra los datos personales y de contacto de emergencia.';
   document.getElementById('formUser').reset();
   document.getElementById('muRole').value = 'lavador';
+  document.getElementById('muUsername').value = '';
   document.getElementById('muUsername').readOnly = false;
+  document.getElementById('muDocumento').value = '';
+  document.getElementById('muTelefono').value = '';
+  document.getElementById('muActive').checked = true;
   toggleUserFields();
   window.openModal('modalUser');
 }
@@ -121,13 +137,15 @@ function editUser(username) {
   const u = users.find(x => x.username === username);
   if (!u) return;
 
-  document.getElementById('muTitle').textContent = 'Editar Usuario/Lavador';
+  document.getElementById('muTitle').textContent = 'Editar Personal / Lavador';
   document.getElementById('muSub').textContent = `Modificando datos de ${u.name}`;
   document.getElementById('muUsername').value = u.username;
   document.getElementById('muUsername').readOnly = true;
   document.getElementById('muPassword').value = u.password || ''; 
   document.getElementById('muName').value = u.name;
   document.getElementById('muRole').value = u.role;
+  document.getElementById('muDocumento').value = u.documento || '';
+  document.getElementById('muTelefono').value = u.telefono || '';
   document.getElementById('muActive').checked = u.active;
   toggleUserFields();
 
@@ -140,14 +158,21 @@ async function saveUser(e) {
   const password = document.getElementById('muPassword').value.trim();
   const name = document.getElementById('muName').value.trim();
   const role = document.getElementById('muRole').value;
+  const documento = document.getElementById('muDocumento').value.trim();
+  const telefono = document.getElementById('muTelefono').value.trim();
   const active = document.getElementById('muActive').checked;
 
   try {
-    await window.apiCall('/api/users/save', 'POST', { username, password, name, role, active });
-    window.showToast('Usuario guardado');
+    const res = await window.apiCall('/api/users/save', 'POST', { username, password, name, role, documento, telefono, active });
+    if (res && res.error) {
+      window.showToast(res.error, 'err');
+      return;
+    }
+    window.showToast('Información guardada correctamente ✓');
     window.closeModal('modalUser');
     loadUsers();
   } catch (e) {
+    window.showToast('Error al guardar la información', 'err');
   }
 }
 

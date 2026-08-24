@@ -38,35 +38,46 @@ def api_get_users():
 @login_required
 @admin_required
 def api_save_user():
-    data     = request.json or {}
-    username = data.get('username', '').strip()
-    password = data.get('password', '').strip()
-    name     = data.get('name', '').strip()
-    role     = data.get('role', 'lavador').strip()
-    active   = data.get('active', True)
+    data      = request.json or {}
+    username  = data.get('username', '').strip()
+    password  = data.get('password', '').strip()
+    name      = data.get('name', '').strip()
+    role      = data.get('role', 'lavador').strip()
+    documento = data.get('documento', '').strip()
+    telefono  = data.get('telefono', '').strip()
+    active    = data.get('active', True)
+
+    if not name:
+        return jsonify({'error': 'El nombre completo es obligatorio.'}), 400
 
     if role == 'lavador' and not username:
         username = f"lavador_{uuid.uuid4().hex[:6]}"
-        password = "N/A"
+        if not password:
+            password = "N/A"
 
-    if not username or not password:
-        return jsonify({'error': 'Usuario y contraseña son requeridos para administradores.'}), 400
+    if role == 'admin' and (not username or not password):
+        return jsonify({'error': 'Usuario y contraseña son requeridos para cuentas de administrador.'}), 400
 
     users    = load_users()
     existing = next((u for u in users if u['username'] == username), None)
 
     if existing:
-        existing['password'] = password
-        existing['name']     = name
-        existing['role']     = role
-        existing['active']   = active
+        if password and password != "N/A":
+            existing['password'] = password
+        existing['name']      = name
+        existing['role']      = role
+        existing['documento'] = documento
+        existing['telefono']  = telefono
+        existing['active']    = active
     else:
         users.append({
-            'username': username,
-            'password': password,
-            'name':     name,
-            'role':     role,
-            'active':   active,
+            'username':  username,
+            'password':  password,
+            'name':      name,
+            'role':      role,
+            'documento': documento,
+            'telefono':  telefono,
+            'active':    active,
         })
 
     save_users(users)

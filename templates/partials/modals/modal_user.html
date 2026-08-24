@@ -1,16 +1,17 @@
 <!-- Modal User (Configuración) -->
 <div class="modal-bg" id="modalUser">
-  <div class="modal">
-    <div class="modal-title" id="muTitle">Nuevo Usuario</div>
-    <div class="modal-sub" id="muSub">Crea una nueva cuenta de acceso al sistema.</div>
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="muTitle">Nuevo Personal / Lavador</div>
+    <div class="modal-sub" id="muSub">Registra los datos personales y de contacto de emergencia.</div>
     <form id="formUser" onsubmit="saveUser(event)">
-      <div class="field-row" id="muCredencialesRow">
-        <div class="field"><label>Usuario</label><input type="text" id="muUsername" required></div>
-        <div class="field"><label>Contraseña</label><input type="text" id="muPassword" required></div>
-      </div>
+      
       <div class="field-row">
-        <div class="field"><label>Nombre Completo</label><input type="text" id="muName" required></div>
-        <div class="field"><label>Rol</label>
+        <div class="field">
+          <label>Nombre Completo <span style="color:var(--red)">*</span></label>
+          <input type="text" id="muName" placeholder="Ej. Juan Pérez" required>
+        </div>
+        <div class="field">
+          <label>Rol</label>
           <select id="muRole" onchange="toggleUserFields()" required
             style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--s2);font-family:var(--sans);font-size:14px;color:var(--text);outline:none;">
             <option value="lavador">Lavador</option>
@@ -18,14 +19,39 @@
           </select>
         </div>
       </div>
-      <div class="field" style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="muActive" checked style="width:18px;height:18px;">
-        <label for="muActive" style="margin:0;cursor:pointer;">Cuenta activa</label>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Número de Documento (Cédula/ID) <span style="color:var(--red)">*</span></label>
+          <input type="text" id="muDocumento" placeholder="Ej. 1040123456" required>
+        </div>
+        <div class="field">
+          <label>Número de Teléfono / Celular <span style="color:var(--red)">*</span></label>
+          <input type="tel" id="muTelefono" placeholder="Ej. 312 345 6789" required>
+        </div>
       </div>
-      <div class="btn-row">
+
+      <div class="field-row" id="muCredencialesRow" style="display:none;">
+        <div class="field">
+          <label>Usuario de Acceso</label>
+          <input type="text" id="muUsername" placeholder="Ej. admin2">
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input type="password" id="muPassword" placeholder="••••••••">
+        </div>
+      </div>
+
+      <div class="field" style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+        <input type="checkbox" id="muActive" checked style="width:18px;height:18px;">
+        <label for="muActive" style="margin:0;cursor:pointer;font-weight:600;">Personal / Cuenta activa</label>
+      </div>
+
+      <div class="btn-row" style="margin-top:16px;">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalUser')">Cancelar</button>
-        <button type="submit" class="btn btn-primary">Guardar usuario</button>
+        <button type="submit" class="btn btn-primary">Guardar información</button>
       </div>
     </form>
   </div>
 </div>
+
