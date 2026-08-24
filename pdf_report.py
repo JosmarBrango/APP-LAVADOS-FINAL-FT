@@ -508,15 +508,15 @@ def generar_nomina_pdf(historial: list, tarifas: dict,
 
 
 def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
-    # ─── 1. Filtrar por fechas y que tengan lavador ───────────────────────
+    # ─── 1. Filtrar registros válidos ────────────────────────────────────
     historial = [h for h in historial_raw if (
         (not desde or h.get('fecha', '') >= desde) and
         (not hasta or h.get('fecha', '') <= hasta) and
-        h.get('lavador', '').strip()
+        (h.get('lavador', '').strip() or (h.get('lavadores') and len(h.get('lavadores')) > 0))
     )]
     historial.sort(key=lambda x: x.get('fecha', ''))
 
-    # ─── 2. Agrupar por lavador ──────────────────────────────────────────
+    # ─── 2. Agrupar por lavador y calcular métricas ──────────────────────
     por_lavador = defaultdict(list)
     for h in historial:
         lavs = h.get('lavadores', [])
@@ -529,555 +529,392 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
             if lav:
                 por_lavador[lav].append(h)
 
-    # ─── 3. Paleta premium ───────────────────────────────────────────────
-    C_NAVY  = (8,  14, 44)       # Azul marino profundo
-    C_AZURE = (37, 99, 235)      # Azul vivo
-    C_TEAL  = (20, 184, 166)     # Verde-azul (Sencillo)
-    C_AMBER = (217, 119, 6)      # Ámbar (Enjuague)
-    C_SLATE = (248, 250, 252)    # Fondo filas pares
-    C_EGR   = (22,  163, 74)     # Verde éxito (totales)
+    # Paleta corporativa sobria
+    C_HEADER_BG = (15, 23, 42)      # Slate 900
+    C_SUB_BG    = (30, 41, 59)      # Slate 800
+    C_ZEBRA     = (248, 250, 252)   # Slate 50
+    C_BORDER    = (226, 232, 240)   # Slate 200
+    C_TEXT      = (15, 23, 42)      # Slate 900
+    C_MUTED_TXT = (100, 116, 139)   # Slate 500
+    C_LINE      = (203, 213, 225)   # Slate 300
 
-    # ─── 4. Datos globales ───────────────────────────────────────────────
-    total_pago_empresa  = sum(float(tarifas.get(h.get('tipo_lavado', 'General'), 0)) for h in historial)
-    total_lavados_per   = len(historial)
+    # ─── 3. Cálculos de Especialistas ────────────────────────────────────
+    workers = []
+    total_empresa_pago = 0
+    total_servicios_empresa = 0
+    total_minutos_empresa = 0
+    sum_gen = 0
+    sum_sen = 0
+    sum_enj = 0
+
+    for lav_name in sorted(por_lavador.keys()):
+        lavs = por_lavador[lav_name]
+        tc = {'General': 0.0, 'Sencillo': 0.0, 'Enjuague': 0.0}
+        pago_w = 0.0
+        mins_w = 0.0
+
+        for l in lavs:
+            tipo = l.get('tipo_lavado', 'General')
+            n_lav = len(l.get('lavadores', [])) or 1
+            fracc = 1.0 / n_lav
+
+            t_low = tipo.lower()
+            if 'sencillo' in t_low:
+                tc['Sencillo'] += fracc
+            elif 'enjuague' in t_low:
+                tc['Enjuague'] += fracc
+            else:
+                tc['General'] += fracc
+
+            tarifa = float(tarifas.get(tipo, 0))
+            pago_w += tarifa / n_lav
+            mins_w += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lav
+
+        pago_w_round = round(pago_w)
+        total_serv_w = tc['General'] + tc['Sencillo'] + tc['Enjuague']
+
+        total_empresa_pago += pago_w_round
+        total_servicios_empresa += total_serv_w
+        total_minutos_empresa += mins_w
+        sum_gen += tc['General']
+        sum_sen += tc['Sencillo']
+        sum_enj += tc['Enjuague']
+
+        hrs_str = f'{int(mins_w)//60}h {int(mins_w)%60:02d}m' if mins_w > 0 else '—'
+
+        workers.append({
+            'name': lav_name.title(),
+            'gen': tc['General'],
+            'sen': tc['Sencillo'],
+            'enj': tc['Enjuague'],
+            'total_serv': total_serv_w,
+            'hrs_str': hrs_str,
+            'pago': pago_w_round
+        })
+
+    especialistas_count = len(workers)
+    promedio_por_lavador = round(total_empresa_pago / especialistas_count) if especialistas_count > 0 else 0
 
     if desde and hasta:
-        periodo_str = _t(f'Del {desde} al {hasta}')
+        periodo_str = f'Del {desde} al {hasta}'
     elif desde:
-        periodo_str = _t(f'Desde el {desde}')
+        periodo_str = f'Desde {desde}'
     elif hasta:
-        periodo_str = _t(f'Hasta el {hasta}')
+        periodo_str = f'Hasta {hasta}'
     else:
         periodo_str = 'Historico Completo'
 
-    # ─── 5. Inicializar PDF portrait A4 ─────────────────────────────────
+    fecha_gen = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+
+    # ─── 4. Inicializar Documento A4 Portrait ────────────────────────────
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=False)
+    pdf.set_margins(12, 10, 12)
     page_num = 0
 
-    # Helper: pie de página
-    def _footer(pn):
-        pdf.set_xy(0, 282)
-        pdf.set_draw_color(*C_RULE)
-        pdf.set_line_width(0.2)
-        pdf.line(20, 282, 190, 282)
-        pdf.set_font('Helvetica', '', 6.5)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_x(20)
-        pdf.cell(170, 5,
-            _t(f'FLOTA URABA  |  Liquidacion de Nomina  |  {periodo_str}  |  CONFIDENCIAL  |  Pag. {pn}'),
-            align='C')
+    PAGE_W = 186  # 210 - 24
 
-    # Helper: verificar espacio
-    def _need_page(needed_h, limit=278):
-        return pdf.get_y() + needed_h > limit
-
-    # Helper: encabezado de tabla (servicios)
-    def _svc_header(y, cols_w, hdrs_t):
-        pdf.set_fill_color(*C_NAVY)
-        pdf.rect(20, y, sum(cols_w), 7.5, 'F')
-        x = 20
-        for ht, cw in zip(hdrs_t, cols_w):
-            pdf.set_font('Helvetica', 'B', 6.5)
-            pdf.set_text_color(*C_WHITE)
-            pdf.set_xy(x + 2, y + 1.8)
-            pdf.cell(cw - 4, 4, _t(ht).upper(), align='L')
-            x += cw
-        pdf.set_y(y + 7.5)
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # PORTADA
-    # ═══════════════════════════════════════════════════════════════════════
-    pdf.add_page()
-    page_num += 1
-
-    # Fondo completo blanco
-    pdf.set_fill_color(*C_WHITE)
-    pdf.rect(0, 0, 210, 297, 'F')
-
-    # Banda navy superior
-    pdf.set_fill_color(*C_NAVY)
-    pdf.rect(0, 0, 210, 92, 'F')
-    pdf.set_fill_color(*C_AZURE)
-    pdf.rect(0, 90, 210, 2.5, 'F')
-
-    # Logo cuadrado con iniciales "FU"
-    pdf.set_fill_color(*C_AZURE)
-    pdf.rect(20, 14, 26, 26, 'F')
-    pdf.set_font('Helvetica', 'B', 13)
-    pdf.set_text_color(*C_WHITE)
-    pdf.set_xy(20, 19)
-    pdf.cell(26, 14, 'FU', align='C')
-
-    # Nombre empresa
-    pdf.set_font('Helvetica', 'B', 26)
-    pdf.set_text_color(*C_WHITE)
-    pdf.set_xy(52, 16)
-    pdf.cell(0, 13, 'FLOTA URABA', align='L')
-
-    pdf.set_font('Helvetica', '', 9)
-    pdf.set_text_color(147, 197, 253)
-    pdf.set_xy(53, 31)
-    pdf.cell(0, 5, 'Gestion de Lavados Vehiculares  |  Zona Uraba, Colombia', align='L')
-
-    # Separador interno
-    pdf.set_draw_color(50, 70, 130)
-    pdf.set_line_width(0.2)
-    pdf.line(20, 43, 190, 43)
-
-    # Título principal
-    pdf.set_font('Helvetica', 'B', 30)
-    pdf.set_text_color(*C_WHITE)
-    pdf.set_xy(20, 49)
-    pdf.cell(0, 16, 'LIQUIDACION DE NOMINA', align='L')
-
-    # Período
-    pdf.set_font('Helvetica', '', 11)
-    pdf.set_text_color(147, 197, 253)
-    pdf.set_xy(20, 67)
-    pdf.cell(0, 6, periodo_str, align='L')
-
-    # Fecha generación
-    fecha_gen = _t(datetime.datetime.now().strftime('%d de %B de %Y  -  %H:%M'))
-    pdf.set_font('Helvetica', '', 8.5)
-    pdf.set_text_color(148, 163, 184)
-    pdf.set_xy(20, 75)
-    pdf.cell(0, 5, f'Generado: {fecha_gen}', align='L')
-
-    # Badge CONFIDENCIAL
-    pdf.set_fill_color(25, 40, 90)
-    pdf.rect(20, 82, 44, 7, 'F')
-    pdf.set_font('Helvetica', 'B', 6.5)
-    pdf.set_text_color(*C_AZURE)
-    pdf.set_xy(20, 83.5)
-    pdf.cell(44, 4, 'DOCUMENTO CONFIDENCIAL', align='C')
-
-    # ── KPI boxes bajo el header ──────────────────────────────────────────
-    kbox_y = 102
-    kbox_data = [
-        ('Especialistas',          str(len(por_lavador)),         C_AZURE),
-        ('Servicios Realizados',   str(total_lavados_per),        C_DARK),
-        ('Total a Liquidar',       f'${total_pago_empresa:,.0f}', C_EGR),
-    ]
-    kbw = 55; kg = 8
-    kbx0 = (210 - (kbw * 3 + kg * 2)) / 2
-    for i, (lbl, val, col) in enumerate(kbox_data):
-        kx = kbx0 + i * (kbw + kg)
-        # Sombra suave
-        pdf.set_fill_color(210, 220, 235)
-        pdf.rect(kx + 1.5, kbox_y + 1.5, kbw, 32, 'F')
-        # Caja principal
-        pdf.set_fill_color(*C_WHITE)
-        pdf.set_draw_color(*C_RULE)
+    def _draw_footer(pn):
+        pdf.set_xy(12, 284)
+        pdf.set_draw_color(*C_BORDER)
         pdf.set_line_width(0.3)
-        pdf.rect(kx, kbox_y, kbw, 32, 'FD')
-        # Barra superior de color
-        pdf.set_fill_color(*col)
-        pdf.rect(kx, kbox_y, kbw, 3, 'F')
-        # Valor
-        pdf.set_font('Helvetica', 'B', 17)
-        pdf.set_text_color(*col)
-        pdf.set_xy(kx, kbox_y + 7)
-        pdf.cell(kbw, 10, _t(val), align='C')
-        # Etiqueta
-        pdf.set_font('Helvetica', 'B', 5.8)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(kx, kbox_y + 22)
-        pdf.cell(kbw, 5, _t(lbl).upper(), align='C')
+        pdf.line(12, 284, 198, 284)
+        pdf.set_font('Helvetica', '', 6.5)
+        pdf.set_text_color(*C_MUTED_TXT)
+        pdf.set_xy(12, 285.5)
+        pdf.cell(PAGE_W, 4, _t(f'FLOTA URABA S.A.  |  Liquidacion de Nomina  |  Periodo: {periodo_str}  |  Doc. Oficial  |  Pag. {pn}'), align='C')
 
-    # ── Línea divisora ────────────────────────────────────────────────────
-    div_y = 146
-    pdf.set_draw_color(*C_RULE)
-    pdf.set_line_width(0.4)
-    pdf.line(20, div_y, 190, div_y)
-
-    # ── Índice de lavadores ───────────────────────────────────────────────
-    pdf.set_font('Helvetica', 'B', 7.5)
-    pdf.set_text_color(*C_MUTED)
-    pdf.set_xy(20, div_y + 7)
-    pdf.cell(0, 5, _t('CONTENIDO - ESPECIALISTAS EN ESTE REPORTE'), align='L')
-
-    y_idx = div_y + 17
-    for i, lav_name in enumerate(sorted(por_lavador.keys()), 1):
-        if y_idx > 244:
-            break
-        lavs_i = por_lavador[lav_name]
-        pago_i = sum(float(tarifas.get(l.get('tipo_lavado', 'General'), 0)) for l in lavs_i)
-        if i % 2 == 0:
-            pdf.set_fill_color(*C_SLATE)
-            pdf.rect(20, y_idx - 1, 170, 8.5, 'F')
-        pdf.set_font('Helvetica', 'B', 8)
-        pdf.set_text_color(*C_BLACK)
-        pdf.set_xy(20, y_idx)
-        pdf.cell(8, 6, f'{i}.', align='R')
-        pdf.set_xy(30, y_idx)
-        pdf.cell(85, 6, _t(lav_name.title()), align='L')
-        pdf.set_font('Helvetica', '', 7.5)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(115, y_idx)
-        pdf.cell(40, 6, f'{len(lavs_i)} servicio(s)', align='L')
-        pdf.set_font('Helvetica', 'B', 8)
-        pdf.set_text_color(*C_EGR)
-        pdf.set_xy(155, y_idx)
-        pdf.cell(35, 6, f'${pago_i:,.0f}', align='R')
-        y_idx += 8.5
-
-    # ── Firma de portada ──────────────────────────────────────────────────
-    pdf.set_draw_color(*C_RULE)
-    pdf.set_line_width(0.3)
-    pdf.line(20, 262, 90, 262)
-    pdf.set_font('Helvetica', 'B', 8)
-    pdf.set_text_color(*C_BLACK)
-    pdf.set_xy(20, 264)
-    pdf.cell(70, 4, _t(responsable or 'Administrador'), align='C')
-    pdf.set_font('Helvetica', '', 7)
-    pdf.set_text_color(*C_MUTED)
-    pdf.set_xy(20, 269)
-    pdf.cell(70, 4, 'Firma del Responsable', align='C')
-
-    _footer(page_num)
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # PÁGINAS INDIVIDUALES POR LAVADOR
-    # ═══════════════════════════════════════════════════════════════════════
-    SVC_COLS = [26, 22, 24, 20, 20, 24, 27, 27]
-    SVC_HDRS = ['Fecha', 'Placa', 'Tipo', 'H.Inicio', 'H.Fin', 'Duracion', 'Tarifa', 'Subtotal']
-
-    for lav_name in sorted(por_lavador.keys()):
-        lavados = sorted(por_lavador[lav_name], key=lambda x: x.get('fecha', ''))
-
+    def _add_page():
+        nonlocal page_num
         pdf.add_page()
         page_num += 1
-        pdf.set_fill_color(*C_WHITE)
+        pdf.set_fill_color(255, 255, 255)
         pdf.rect(0, 0, 210, 297, 'F')
+        return page_num
 
-        # Header navy
-        pdf.set_fill_color(*C_NAVY)
-        pdf.rect(0, 0, 210, 50, 'F')
-        pdf.set_fill_color(*C_AZURE)
-        pdf.rect(0, 48.5, 210, 1.5, 'F')
+    # Helper formato decimal limpio
+    def _fmt_dec(n):
+        return f'{n:.1f}'.rstrip('0').rstrip('.') if n > 0 else '0'
 
-        # Avatar cuadrado con iniciales
-        words = lav_name.split()
-        initials = ''.join(w[0] for w in words[:2])
-        pdf.set_fill_color(*C_AZURE)
-        pdf.rect(18, 10, 30, 30, 'F')
-        pdf.set_font('Helvetica', 'B', 15)
-        pdf.set_text_color(*C_WHITE)
-        pdf.set_xy(18, 17)
-        pdf.cell(30, 15, _t(initials), align='C')
+    # ─── PÁGINA 1: Encabezado, KPIs y Tablas ──────────────────────────────
+    _add_page()
 
-        # Nombre y cargo
-        pdf.set_font('Helvetica', 'B', 20)
-        pdf.set_text_color(*C_WHITE)
-        pdf.set_xy(54, 13)
-        pdf.cell(100, 10, _t(lav_name.title()), align='L')
-        pdf.set_font('Helvetica', '', 9)
-        pdf.set_text_color(147, 197, 253)
-        pdf.set_xy(55, 25)
-        pdf.cell(100, 5, 'Especialista en Lavado de Vehiculos', align='L')
+    # Encabezado Institucional Compacto
+    y_hdr = 10
+    pdf.set_draw_color(*C_LINE)
+    pdf.set_line_width(0.4)
+    pdf.rect(12, y_hdr, PAGE_W, 18)
 
-        # Info derecha del header
-        pdf.set_font('Helvetica', '', 7.5)
-        pdf.set_text_color(148, 163, 184)
-        pdf.set_xy(110, 14)
-        pdf.cell(80, 5, periodo_str, align='R')
-        pdf.set_font('Helvetica', 'B', 8)
-        pdf.set_text_color(*C_AZURE)
-        pdf.set_xy(110, 21)
-        total_lavados_frac = sum((1.0 / (len(l.get('lavadores', [])) or 1)) for l in lavados)
-        display_lavados = f"{total_lavados_frac:g}"
-        pdf.cell(80, 5, _t(f'{display_lavados} servicios  |  periodo activo'), align='R')
+    # Sub-bloque izquierdo: Empresa
+    pdf.set_xy(14, y_hdr + 2.5)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(*C_TEXT)
+    pdf.cell(46, 6, 'FLOTA URABA S.A.', align='L')
+    pdf.set_xy(14, y_hdr + 8.5)
+    pdf.set_font('Helvetica', '', 7.5)
+    pdf.set_text_color(*C_MUTED_TXT)
+    pdf.cell(46, 5, 'Control de Lavados Vehiculares', align='L')
 
-        # ── Mini KPIs del lavador ─────────────────────────────────────────
-        tc = {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
-        t_mins = 0; t_pago = 0
-        for l in lavados:
-            tipo = l.get('tipo_lavado', 'General')
-            n_lavadores = len(l.get('lavadores', []))
-            if n_lavadores == 0:
-                n_lavadores = 1
-                
-            tc[tipo] = tc.get(tipo, 0) + (1.0 / n_lavadores)
-            t_pago += float(tarifas.get(tipo, 0)) / n_lavadores
-            t_mins += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lavadores
+    # Línea vertical 1
+    pdf.line(60, y_hdr, 60, y_hdr + 18)
 
-        mkpi = [
-            ('Generales',  f"{tc['General']:g}",  C_AZURE),
-            ('Sencillos',  f"{tc['Sencillo']:g}", C_TEAL),
-            ('Enjuagues',  f"{tc['Enjuague']:g}", C_AMBER),
-            ('Hrs Trabajadas', f'{int(t_mins)//60}h {int(t_mins)%60:02d}m', C_MUTED),
+    # Sub-bloque central: Título y Período
+    pdf.set_xy(62, y_hdr + 2)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.set_text_color(*C_TEXT)
+    pdf.cell(78, 6, 'LIQUIDACION DE NOMINA', align='C')
+    pdf.set_xy(62, y_hdr + 8.5)
+    pdf.set_font('Helvetica', '', 8)
+    pdf.set_text_color(*C_MUTED_TXT)
+    pdf.cell(78, 5, _t(f'Periodo: {periodo_str}'), align='C')
+
+    # Línea vertical 2
+    pdf.line(142, y_hdr, 142, y_hdr + 18)
+
+    # Sub-bloque derecho: Metadatos
+    pdf.set_xy(144, y_hdr + 2.5)
+    pdf.set_font('Helvetica', '', 7)
+    pdf.set_text_color(*C_MUTED_TXT)
+    pdf.cell(52, 4, f'Emision: {fecha_gen}', align='L')
+    pdf.set_xy(144, y_hdr + 7)
+    pdf.cell(52, 4, f'Responsable: {_t(responsable or "Administrador")[:18]}', align='L')
+    pdf.set_xy(144, y_hdr + 11.5)
+    pdf.set_font('Helvetica', 'B', 6.5)
+    pdf.set_text_color(30, 58, 138)
+    pdf.cell(52, 4, 'DOCUMENTO OFICIAL', align='L')
+
+    # ─── Cinta de Resumen Ejecutivo (KPIs) ──────────────────────────────
+    y_kpi = y_hdr + 22
+    kpi_w = PAGE_W / 4.0
+    kpis = [
+        ('TOTAL A LIQUIDAR', f'${total_empresa_pago:,.0f}', True),
+        ('SERVICIOS LIQUIDADOS', f'{_fmt_dec(total_servicios_empresa)} serv.', False),
+        ('PERSONAL ACTIVO', f'{especialistas_count} especialistas', False),
+        ('PROMEDIO / LAVADOR', f'${promedio_por_lavador:,.0f}', False),
+    ]
+
+    for i, (lbl, val, is_hi) in enumerate(kpis):
+        kx = 12 + i * kpi_w
+        pdf.set_fill_color(*C_ZEBRA)
+        pdf.set_draw_color(*C_BORDER)
+        pdf.set_line_width(0.3)
+        pdf.rect(kx, y_kpi, kpi_w, 12, 'FD')
+
+        # Línea superior navy
+        pdf.set_fill_color(*C_HEADER_BG)
+        pdf.rect(kx, y_kpi, kpi_w, 1.2, 'F')
+
+        # Label
+        pdf.set_font('Helvetica', 'B', 5.5)
+        pdf.set_text_color(*C_MUTED_TXT)
+        pdf.set_xy(kx + 2, y_kpi + 2.5)
+        pdf.cell(kpi_w - 4, 3.5, lbl, align='C')
+
+        # Valor
+        pdf.set_font('Helvetica', 'B', 9.5)
+        pdf.set_text_color(*C_TEXT)
+        pdf.set_xy(kx + 2, y_kpi + 6)
+        pdf.cell(kpi_w - 4, 5, _t(val), align='C')
+
+    # ─── Sección 1: Tabla Maestra de Especialistas ───────────────────────
+    y_sec1 = y_kpi + 16
+    pdf.set_fill_color(*C_HEADER_BG)
+    pdf.rect(12, y_sec1, PAGE_W, 5.5, 'F')
+    pdf.set_font('Helvetica', 'B', 7)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(15, y_sec1 + 1)
+    pdf.cell(PAGE_W - 6, 3.5, '1. RESUMEN CONSOLIDADO POR ESPECIALISTA', align='L')
+
+    # Columnas de tabla de especialistas
+    COLS_W = [8, 52, 18, 18, 18, 20, 20, 32]
+    HDRS_W = ['#', 'ESPECIALISTA', 'GENERALES', 'SENCILLOS', 'ENJUAGUES', 'TOTAL SERV.', 'HRS TRAB.', 'TOTAL LIQUIDADO']
+
+    y_th = y_sec1 + 5.5
+    pdf.set_fill_color(*C_SUB_BG)
+    pdf.rect(12, y_th, PAGE_W, 5.5, 'F')
+    x_c = 12
+    for cw, ch in zip(COLS_W, HDRS_W):
+        pdf.set_font('Helvetica', 'B', 6)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_xy(x_c, y_th + 1)
+        align_c = 'L' if ch in ('ESPECIALISTA') else ('R' if ch == 'TOTAL LIQUIDADO' else 'C')
+        pdf.cell(cw, 3.5, ch, align=align_c)
+        x_c += cw
+
+    y_row = y_th + 5.5
+    for idx, w in enumerate(workers, 1):
+        bg = C_ZEBRA if idx % 2 == 0 else (255, 255, 255)
+        pdf.set_fill_color(*bg)
+        pdf.set_draw_color(*C_BORDER)
+        pdf.set_line_width(0.2)
+        pdf.rect(12, y_row, PAGE_W, 6, 'FD')
+
+        row_vals = [
+            (str(idx), 'C', False),
+            (w['name'], 'L', True),
+            (_fmt_dec(w['gen']), 'C', False),
+            (_fmt_dec(w['sen']), 'C', False),
+            (_fmt_dec(w['enj']), 'C', False),
+            (_fmt_dec(w['total_serv']), 'C', True),
+            (w['hrs_str'], 'C', False),
+            (f"${w['pago']:,.0f}", 'R', True),
         ]
-        mk_w = 37; mk_h = 22; mk_gap = 5
-        mk_y = 57
-        for i, (lbl, val, col) in enumerate(mkpi):
-            mx = 20 + i * (mk_w + mk_gap)
-            pdf.set_fill_color(*C_LIGHT)
-            pdf.set_draw_color(*C_RULE)
-            pdf.set_line_width(0.2)
-            pdf.rect(mx, mk_y, mk_w, mk_h, 'FD')
-            pdf.set_fill_color(*col)
-            pdf.rect(mx, mk_y, mk_w, 1.5, 'F')
-            pdf.set_font('Helvetica', 'B', 14)
-            pdf.set_text_color(*col)
-            pdf.set_xy(mx, mk_y + 3)
-            pdf.cell(mk_w, 9, _t(val), align='C')
-            pdf.set_font('Helvetica', 'B', 5.5)
-            pdf.set_text_color(*C_MUTED)
-            pdf.set_xy(mx, mk_y + 14)
-            pdf.cell(mk_w, 4, _t(lbl).upper(), align='C')
 
-        pdf.set_y(mk_y + mk_h + 9)
+        x_c = 12
+        for (val, al, is_b), cw in zip(row_vals, COLS_W):
+            pdf.set_font('Helvetica', 'B' if is_b else '', 7)
+            pdf.set_text_color(*C_TEXT)
+            pdf.set_xy(x_c + (1.5 if al == 'L' else (-1.5 if al == 'R' else 0)), y_row + 1.2)
+            pdf.cell(cw - (3 if al in ('L', 'R') else 0), 3.5, _t(val), align=al)
+            x_c += cw
+        y_row += 6
 
-        # ── Tabla de servicios ────────────────────────────────────────────
+    # Fila de Totales de la Sección 1
+    pdf.set_fill_color(*C_HEADER_BG)
+    pdf.rect(12, y_row, PAGE_W, 6.5, 'F')
+    pdf.set_font('Helvetica', 'B', 7)
+    pdf.set_text_color(255, 255, 255)
+
+    pdf.set_xy(14, y_row + 1.5)
+    pdf.cell(COLS_W[0] + COLS_W[1] - 2, 3.5, 'TOTALES GENERALES', align='L')
+
+    # Sumas intermedias
+    sum_x = 12 + COLS_W[0] + COLS_W[1]
+    pdf.set_xy(sum_x, y_row + 1.5); pdf.cell(COLS_W[2], 3.5, _fmt_dec(sum_gen), align='C')
+    sum_x += COLS_W[2]
+    pdf.set_xy(sum_x, y_row + 1.5); pdf.cell(COLS_W[3], 3.5, _fmt_dec(sum_sen), align='C')
+    sum_x += COLS_W[3]
+    pdf.set_xy(sum_x, y_row + 1.5); pdf.cell(COLS_W[4], 3.5, _fmt_dec(sum_enj), align='C')
+    sum_x += COLS_W[4]
+    pdf.set_xy(sum_x, y_row + 1.5); pdf.cell(COLS_W[5], 3.5, _fmt_dec(total_servicios_empresa), align='C')
+    sum_x += COLS_W[5]
+    hrs_total_str = f'{int(total_minutos_empresa)//60}h {int(total_minutos_empresa)%60:02d}m'
+    pdf.set_xy(sum_x, y_row + 1.5); pdf.cell(COLS_W[6], 3.5, hrs_total_str, align='C')
+    sum_x += COLS_W[6]
+    pdf.set_xy(sum_x - 2, y_row + 1.5); pdf.cell(COLS_W[7], 3.5, f"${total_empresa_pago:,.0f}", align='R')
+
+    y_next = y_row + 10.5
+
+    # ─── Sección 2: Detalle Cronológico de Servicios ─────────────────────
+    COLS_D = [18, 16, 22, 22, 22, 14, 42, 15, 15]
+    HDRS_D = ['FECHA', 'PLACA', 'MUNICIPIO', 'TIPO', 'HORARIO', 'DUR.', 'ESPECIALISTA(S)', 'TARIFA', 'LIQUIDADO']
+
+    def _draw_sec2_header(y):
+        pdf.set_fill_color(*C_HEADER_BG)
+        pdf.rect(12, y, PAGE_W, 5.5, 'F')
         pdf.set_font('Helvetica', 'B', 7)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_x(20)
-        pdf.cell(0, 4, 'DETALLE DE SERVICIOS REALIZADOS EN EL PERIODO', align='L')
-        pdf.ln(5)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_xy(15, y + 1)
+        pdf.cell(PAGE_W - 6, 3.5, '2. REGISTRO DETALLADO DE SERVICIOS REALIZADOS', align='L')
 
-        _svc_header(pdf.get_y(), SVC_COLS, SVC_HDRS)
+        y_th2 = y + 5.5
+        pdf.set_fill_color(*C_SUB_BG)
+        pdf.rect(12, y_th2, PAGE_W, 5.5, 'F')
+        x_d = 12
+        for cw, ch in zip(COLS_D, HDRS_D):
+            pdf.set_font('Helvetica', 'B', 6)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_xy(x_d, y_th2 + 1)
+            align_d = 'L' if ch in ('MUNICIPIO', 'TIPO', 'ESPECIALISTA(S)') else ('R' if ch in ('TARIFA', 'LIQUIDADO') else 'C')
+            pdf.cell(cw, 3.5, ch, align=align_d)
+            x_d += cw
+        return y_th2 + 5.5
 
-        for idx, l in enumerate(lavados):
-            if _need_page(8):
-                _footer(page_num)
-                pdf.add_page()
-                page_num += 1
-                pdf.set_fill_color(*C_WHITE)
-                pdf.rect(0, 0, 210, 297, 'F')
-                # Mini-header de continuación
-                pdf.set_fill_color(*C_NAVY)
-                pdf.rect(0, 0, 210, 16, 'F')
-                pdf.set_font('Helvetica', 'B', 9)
-                pdf.set_text_color(*C_WHITE)
-                pdf.set_xy(20, 5)
-                pdf.cell(0, 7, _t(f'{lav_name.title()}  —  Continuacion'), align='L')
-                pdf.set_y(22)
-                _svc_header(pdf.get_y(), SVC_COLS, SVC_HDRS)
+    # Si no cabe el inicio de la sección 2 con al menos 3 filas, pasamos a página 2
+    if y_next + 28 > 270:
+        _draw_footer(page_num)
+        _add_page()
+        y_next = 12
+
+    y_d_row = _draw_sec2_header(y_next)
+
+    if len(historial) == 0:
+        pdf.set_fill_color(255, 255, 255)
+        pdf.rect(12, y_d_row, PAGE_W, 8, 'FD')
+        pdf.set_font('Helvetica', 'I', 7.5)
+        pdf.set_text_color(*C_MUTED_TXT)
+        pdf.set_xy(12, y_d_row + 2)
+        pdf.cell(PAGE_W, 4, 'No se registraron lavados en el periodo seleccionado.', align='C')
+        y_d_row += 8
+    else:
+        for idx_d, l in enumerate(historial, 1):
+            # Salto de página automático si se acerca al final
+            if y_d_row + 6 > 272:
+                _draw_footer(page_num)
+                _add_page()
+                y_d_row = _draw_sec2_header(12)
+
+            bg = C_ZEBRA if idx_d % 2 == 0 else (255, 255, 255)
+            pdf.set_fill_color(*bg)
+            pdf.set_draw_color(*C_BORDER)
+            pdf.set_line_width(0.2)
+            pdf.rect(12, y_d_row, PAGE_W, 5.5, 'FD')
 
             tipo = l.get('tipo_lavado', 'General')
             tarifa_u = float(tarifas.get(tipo, 0))
+            lavs_list = l.get('lavadores', []) or ([l.get('lavador')] if l.get('lavador') else [])
+            n_lav = len(lavs_list) or 1
+            liq_val = tarifa_u / n_lav
+
             mins_l = _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', ''))
-            dur_str = f'{mins_l // 60}h {mins_l % 60:02d}m' if mins_l > 0 else '--'
-            tipo_col = {'General': C_AZURE, 'Sencillo': C_TEAL, 'Enjuague': C_AMBER}.get(tipo, C_MUTED)
+            dur_str = f'{mins_l//60}h {mins_l%60:02d}m' if mins_l > 0 else '—'
+            horario_str = f"{l.get('hora_inicio','—')} → {l.get('hora_fin','—')}" if (l.get('hora_inicio') and l.get('hora_fin')) else (l.get('hora_inicio') or l.get('hora_llegada') or '—')
+            esp_str = ', '.join(lavs_list).title()
 
-            bg = C_SLATE if idx % 2 else C_WHITE
-            ry = pdf.get_y()
-            pdf.set_fill_color(*bg)
-            pdf.set_draw_color(*C_RULE)
-            pdf.set_line_width(0.1)
-            pdf.rect(20, ry, sum(SVC_COLS), 7, 'FD')
-
-            n_lavadores = len(l.get('lavadores', []))
-            if n_lavadores == 0:
-                n_lavadores = 1
-            
-            cells = [
-                l.get('fecha', '-'), l.get('placa', '-'), tipo,
-                l.get('hora_inicio', '-'), l.get('hora_fin', '-'),
-                dur_str, f'${tarifa_u:,.0f}', f'${tarifa_u / n_lavadores:,.0f}',
+            vals_d = [
+                (l.get('fecha', '—'), 'C', False),
+                (l.get('placa', '—'), 'C', True),
+                (l.get('municipio', '—')[:12], 'L', False),
+                (tipo[:12], 'L', False),
+                (horario_str, 'C', False),
+                (dur_str, 'C', False),
+                (esp_str[:25], 'L', False),
+                (f"${tarifa_u:,.0f}", 'R', False),
+                (f"${liq_val:,.0f}", 'R', True),
             ]
-            x = 20
-            for ci, (cell, cw) in enumerate(zip(cells, SVC_COLS)):
-                is_last = ci == len(cells) - 1
-                is_tipo = ci == 2
-                fnt   = 'B' if (ci == 0 or is_last or is_tipo) else ''
-                color = (C_EGR if is_last else (tipo_col if is_tipo else C_DARK))
-                pdf.set_font('Helvetica', fnt, 7)
-                pdf.set_text_color(*color)
-                pdf.set_xy(x + 2, ry + 1.8)
-                pdf.cell(cw - 4, 4, _t(str(cell)), align='L')
-                x += cw
-            pdf.set_y(ry + 7)
 
-        # ── Caja de total ─────────────────────────────────────────────────
-        if _need_page(44):
-            _footer(page_num)
-            pdf.add_page()
-            page_num += 1
-            pdf.set_fill_color(*C_WHITE)
-            pdf.rect(0, 0, 210, 297, 'F')
-            pdf.set_y(20)
+            x_d = 12
+            for (val, al, is_b), cw in zip(vals_d, COLS_D):
+                pdf.set_font('Helvetica', 'B' if is_b else '', 6.5)
+                pdf.set_text_color(*C_TEXT)
+                pdf.set_xy(x_d + (1.2 if al == 'L' else (-1.2 if al == 'R' else 0)), y_d_row + 1)
+                pdf.cell(cw - (2.4 if al in ('L', 'R') else 0), 3.5, _t(str(val)), align=al)
+                x_d += cw
+            y_d_row += 5.5
 
-        pdf.ln(9)
-        tb_y = pdf.get_y(); tb_x = 100; tb_w = 90; tb_h = 38
+    # ─── Sección 3: Firmas y Validación ──────────────────────────────────
+    y_sign = y_d_row + 8
+    if y_sign + 26 > 275:
+        _draw_footer(page_num)
+        _add_page()
+        y_sign = 16
 
-        # Sombra
-        pdf.set_fill_color(200, 230, 210)
-        pdf.rect(tb_x + 1.5, tb_y + 1.5, tb_w, tb_h, 'F')
-        # Caja
-        pdf.set_fill_color(240, 253, 244)
-        pdf.set_draw_color(*C_EGR)
-        pdf.set_line_width(0.6)
-        pdf.rect(tb_x, tb_y, tb_w, tb_h, 'FD')
-        # Barra superior verde
-        pdf.set_fill_color(*C_EGR)
-        pdf.rect(tb_x, tb_y, tb_w, 2.5, 'F')
-        # Etiqueta
-        pdf.set_font('Helvetica', 'B', 6.5)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(tb_x, tb_y + 7)
-        pdf.cell(tb_w, 4, 'TOTAL A PAGAR EN EL PERIODO', align='C')
-        # Valor
-        pdf.set_font('Helvetica', 'B', 24)
-        pdf.set_text_color(*C_EGR)
-        pdf.set_xy(tb_x, tb_y + 13)
-        pdf.cell(tb_w, 14, f'${t_pago:,.0f}', align='C')
-        # Nota inferior
-        pdf.set_font('Helvetica', '', 6.5)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(tb_x, tb_y + 30)
-        pdf.cell(tb_w, 4,
-            _t(f'{display_lavados} servicio(s)  |  {int(t_mins)//60}h {int(t_mins)%60:02d}m trabajados'),
-            align='C')
-
-        _footer(page_num)
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # PÁGINA FINAL: RESUMEN EJECUTIVO
-    # ═══════════════════════════════════════════════════════════════════════
-    pdf.add_page()
-    page_num += 1
-    pdf.set_fill_color(*C_WHITE)
-    pdf.rect(0, 0, 210, 297, 'F')
-
-    # Header
-    pdf.set_fill_color(*C_NAVY)
-    pdf.rect(0, 0, 210, 36, 'F')
-    pdf.set_fill_color(*C_AZURE)
-    pdf.rect(0, 34.5, 210, 1.5, 'F')
-
-    pdf.set_font('Helvetica', 'B', 18)
-    pdf.set_text_color(*C_WHITE)
-    pdf.set_xy(20, 10)
-    pdf.cell(0, 9, 'RESUMEN EJECUTIVO DE NOMINA', align='L')
-
-    pdf.set_font('Helvetica', '', 8)
-    pdf.set_text_color(147, 197, 253)
-    pdf.set_xy(20, 22)
-    fecha_gen2 = _t(datetime.datetime.now().strftime('%d/%m/%Y %H:%M'))
-    pdf.cell(0, 5, _t(f'Flota Uraba  |  {periodo_str}  |  Generado: {fecha_gen2}'), align='L')
-
-    pdf.set_y(43)
-
-    # Tabla resumen
-    SR_COLS = [55, 24, 24, 24, 29, 34]
-    SR_HDRS = ['Especialista', 'Generales', 'Sencillos', 'Enjuagues', 'Hrs Trab.', 'Total ($)']
-
-    sr_y = pdf.get_y()
-    pdf.set_fill_color(*C_DARK)
-    pdf.rect(20, sr_y, sum(SR_COLS), 8, 'F')
-    x = 20
-    for ht, hw in zip(SR_HDRS, SR_COLS):
-        pdf.set_font('Helvetica', 'B', 7)
-        pdf.set_text_color(*C_WHITE)
-        pdf.set_xy(x + 2, sr_y + 2)
-        pdf.cell(hw - 4, 4.5, _t(ht).upper(), align='L')
-        x += hw
-    pdf.set_y(sr_y + 8)
-
-    grand_total = 0; grand_mins = 0
-    for idx, lav_name in enumerate(sorted(por_lavador.keys())):
-        lavs = por_lavador[lav_name]
-        tc2 = {'General': 0, 'Sencillo': 0, 'Enjuague': 0}
-        pl = 0; ml = 0
-        for l in lavs:
-            tipo = l.get('tipo_lavado', 'General')
-            n_lavadores = len(l.get('lavadores', []))
-            if n_lavadores == 0:
-                n_lavadores = 1
-                
-            tc2[tipo] = tc2.get(tipo, 0) + (1.0 / n_lavadores)
-            pl += float(tarifas.get(tipo, 0)) / n_lavadores
-            ml += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lavadores
-        grand_total += pl; grand_mins += ml
-
-        bg = C_SLATE if idx % 2 else C_WHITE
-        ry = pdf.get_y()
-        pdf.set_fill_color(*bg)
-        pdf.set_draw_color(*C_RULE)
-        pdf.set_line_width(0.1)
-        pdf.rect(20, ry, sum(SR_COLS), 8.5, 'FD')
-        row = [
-            lav_name.title(),
-            f"{tc2['General']:g}", f"{tc2['Sencillo']:g}", f"{tc2['Enjuague']:g}",
-            f'{int(ml)//60}h {int(ml)%60:02d}m', f'${pl:,.0f}',
-        ]
-        x = 20
-        for ci, (cell, cw) in enumerate(zip(row, SR_COLS)):
-            is_last = ci == len(row) - 1
-            fnt   = 'B' if (ci == 0 or is_last) else ''
-            color = C_EGR if is_last else (C_BLACK if ci == 0 else C_DARK)
-            pdf.set_font('Helvetica', fnt, 8)
-            pdf.set_text_color(*color)
-            pdf.set_xy(x + 2, ry + 2.2)
-            pdf.cell(cw - 4, 5, _t(str(cell)), align='L')
-            x += cw
-        pdf.set_y(ry + 8.5)
-
-    # Fila de gran total
-    gt_y = pdf.get_y()
-    pdf.set_fill_color(*C_NAVY)
-    pdf.rect(20, gt_y, sum(SR_COLS), 12, 'F')
-    pdf.set_font('Helvetica', 'B', 9)
-    pdf.set_text_color(*C_WHITE)
-    pdf.set_xy(22, gt_y + 3)
-    pdf.cell(sum(SR_COLS) - SR_COLS[-1] - 4, 7, 'TOTAL EMPRESA', align='L')
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(134, 239, 172)  # green-300
-    pdf.set_xy(20 + sum(SR_COLS[:-1]), gt_y + 2)
-    pdf.cell(SR_COLS[-1], 9, f'${grand_total:,.0f}', align='L')
-
-    pdf.set_y(gt_y + 20)
-    pdf.set_draw_color(*C_RULE)
+    pdf.set_draw_color(*C_LINE)
     pdf.set_line_width(0.3)
-    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
-    pdf.ln(10)
 
-    # Notas legales
-    pdf.set_font('Helvetica', 'B', 7)
-    pdf.set_text_color(*C_MUTED)
-    pdf.set_x(20)
-    pdf.cell(0, 4, 'NOTAS Y CONDICIONES', align='L')
-    pdf.ln(7)
-    notas = [
-        '* Los valores corresponden a las tarifas configuradas en el sistema al momento de la generacion de este reporte.',
-        '* Documento de caracter confidencial para uso exclusivo interno de Flota Uraba.',
-        '* Los tiempos trabajados se calculan en base a las horas de inicio y fin registradas en cada servicio.',
-        '* Cualquier discrepancia debe reportarse al administrador antes del cierre del periodo de pago.',
-    ]
-    for nota in notas:
-        pdf.set_font('Helvetica', '', 7.5)
-        pdf.set_text_color(*C_DARK)
-        pdf.set_x(20)
-        pdf.multi_cell(170, 5, _t(nota), align='L')
-        pdf.ln(1)
+    # Firma 1: Administrador / Responsable
+    pdf.line(20, y_sign + 14, 86, y_sign + 14)
+    pdf.set_font('Helvetica', 'B', 7.5)
+    pdf.set_text_color(*C_TEXT)
+    pdf.set_xy(20, y_sign + 15)
+    pdf.cell(66, 4, _t(responsable or 'Administrador de Operaciones'), align='C')
+    pdf.set_font('Helvetica', '', 6.5)
+    pdf.set_text_color(*C_MUTED_TXT)
+    pdf.set_xy(20, y_sign + 19)
+    pdf.cell(66, 4, 'Elaboro y Reviso', align='C')
 
-    # Sección de firmas
-    pdf.set_y(245)
-    pdf.set_draw_color(*C_DARK)
-    pdf.set_line_width(0.3)
-    pdf.line(20, 258, 92, 258)
-    pdf.set_font('Helvetica', 'B', 8)
-    pdf.set_text_color(*C_BLACK)
-    pdf.set_xy(20, 260)
-    pdf.cell(72, 4, _t(responsable or 'Administrador del Sistema'), align='C')
-    pdf.set_font('Helvetica', '', 7)
-    pdf.set_text_color(*C_MUTED)
-    pdf.set_xy(20, 265)
-    pdf.cell(72, 4, 'Elaboro y Reviso', align='C')
+    # Firma 2: Aprobación
+    pdf.line(124, y_sign + 14, 190, y_sign + 14)
+    pdf.set_font('Helvetica', 'B', 7.5)
+    pdf.set_text_color(*C_TEXT)
+    pdf.set_xy(124, y_sign + 15)
+    pdf.cell(66, 4, 'FLOTA URABA S.A.', align='C')
+    pdf.set_font('Helvetica', '', 6.5)
+    pdf.set_text_color(*C_MUTED_TXT)
+    pdf.set_xy(124, y_sign + 19)
+    pdf.cell(66, 4, 'Aprobacion y Liquidacion', align='C')
 
-    pdf.line(128, 258, 190, 258)
-    pdf.set_font('Helvetica', 'B', 8)
-    pdf.set_text_color(*C_BLACK)
-    pdf.set_xy(128, 260)
-    pdf.cell(62, 4, 'FLOTA URABA', align='C')
-    pdf.set_font('Helvetica', '', 7)
-    pdf.set_text_color(*C_MUTED)
-    pdf.set_xy(128, 265)
-    pdf.cell(62, 4, 'Empresa Autorizada', align='C')
-
-    _footer(page_num)
+    _draw_footer(page_num)
     return bytes(pdf.output())
 
 

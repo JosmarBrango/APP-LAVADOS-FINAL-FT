@@ -1,4 +1,4 @@
-// ─── Vista Personal y Rendimiento (Nómina) ──────────────────────────────────
+// ─── Vista Personal y Rendimiento (Nómina Corporativa) ────────────────────────
 async function exportarNominaPdf() {
   const desde = document.getElementById('personalDesde')?.value || '';
   const hasta = document.getElementById('personalHasta')?.value || '';
@@ -30,7 +30,7 @@ async function exportarNominaPdf() {
   } catch (e) {
     window.showToast('Error al generar PDF', 'err');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '📄 Exportar Nómina PDF'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '⬇ Exportar Nómina PDF'; }
   }
 }
 
@@ -53,9 +53,27 @@ function _setQuincena(q) {
     desde = new Date(y, m, 1);
     hasta = new Date(y, m + 1, 0);
   }
-  document.getElementById('personalDesde').value = desde.toISOString().split('T')[0];
-  document.getElementById('personalHasta').value = hasta.toISOString().split('T')[0];
+  const dStr = desde.toISOString().split('T')[0];
+  const hStr = hasta.toISOString().split('T')[0];
+  
+  const dEl = document.getElementById('personalDesde');
+  const hEl = document.getElementById('personalHasta');
+  if (dEl) dEl.value = dStr;
+  if (hEl) hEl.value = hStr;
+  
   _buildPersonalView(window.state.historial_lavados || []);
+}
+
+function toggleNominaDetalle(key) {
+  const row = document.getElementById(`nom-detail-${key}`);
+  const btn = document.getElementById(`nom-btn-${key}`);
+  if (!row || !btn) return;
+
+  const isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? 'table-row' : 'none';
+  btn.innerHTML = isHidden 
+    ? 'Ocultar <span class="material-symbols-outlined" style="font-size:16px;">expand_less</span>' 
+    : 'Detalle <span class="material-symbols-outlined" style="font-size:16px;">expand_more</span>';
 }
 
 function _buildPersonalView(historial) {
@@ -71,10 +89,12 @@ function _buildPersonalView(historial) {
   const desde = desdeEl ? desdeEl.value : '';
   const hasta = hastaEl ? hastaEl.value : '';
 
+  // 1. Filtrar registros por período
   let histFiltrado = historial.filter(h => {
     const lavs = h.lavadores && h.lavadores.length ? h.lavadores : (h.lavador ? [h.lavador] : []);
     return lavs.some(l => l && l.trim() !== '');
   });
+
   if (desde || hasta) {
     histFiltrado = histFiltrado.filter(h => {
       if (!h.fecha) return false;
@@ -86,8 +106,10 @@ function _buildPersonalView(historial) {
 
   const tarifas = window.state._tarifas || {};
 
+  // 2. Agrupar por lavador
   const lavadores = {};
-  TODOS_LAVADORES.forEach(name => lavadores[name] = []);
+  TODOS_LAVADORES.forEach(name => lavadores[name.trim().toUpperCase()] = []);
+  
   histFiltrado.forEach(h => {
     const lavsList = h.lavadores && h.lavadores.length
       ? h.lavadores
@@ -100,135 +122,301 @@ function _buildPersonalView(historial) {
     });
   });
 
+  // 3. Cálculos globales y por especialista
+  let totalNominaGlobal = 0;
+  let totalServiciosGlobal = 0;
+  let lavadoresActivosCount = 0;
+
+  const workersData = [];
+
+  for (const [name, lavados] of Object.entries(lavadores)) {
+    let pagoEstimado = 0;
+    let totalFracc = 0;
+    let genCount = 0;
+    let senCount = 0;
+    let enjCount = 0;
+    let totalMinutos = 0;
+
+    lavados.forEach(l => {
+      const tipo = l.tipo_lavado || 'General';
+      const tarifa = parseFloat(tarifas[tipo] || 0);
+      const nLav = (l.lavadores && l.lavadores.length) ? l.lavadores.length : 1;
+      const fracc = 1 / nLav;
+
+      pagoEstimado += tarifa / nLav;
+      totalFracc += fracc;
+
+      const tLow = tipo.toLowerCase();
+      if (tLow.includes('sencillo')) senCount += fracc;
+      else if (tLow.includes('enjuague')) enjCount += fracc;
+      else genCount += fracc;
+
+      // Calcular tiempo
+      if (l.hora_inicio && l.hora_fin) {
+        const [h1, m1] = l.hora_inicio.split(':').map(Number);
+        const [h2, m2] = l.hora_fin.split(':').map(Number);
+        if (!isNaN(h1) && !isNaN(m1) && !isNaN(h2) && !isNaN(m2)) {
+          const diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+          if (diff > 0) totalMinutos += diff / nLav;
+        }
+      }
+    });
+
+    pagoEstimado = Math.round(pagoEstimado);
+    totalNominaGlobal += pagoEstimado;
+    totalServiciosGlobal += totalFracc;
+
+    if (lavados.length > 0) {
+      lavadoresActivosCount++;
+    }
+
+    // Iniciales para monograma
+    const parts = name.split(' ').filter(p => p.length > 0);
+    const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]) : (parts[0] ? parts[0].slice(0, 2) : 'LV');
+
+    const totalHorasStr = totalMinutos > 0 
+      ? `${Math.floor(totalMinutos / 60)}h ${(Math.round(totalMinutos) % 60).toString().padStart(2, '0')}m`
+      : '—';
+
+    workersData.push({
+      key: name.replace(/[^a-zA-Z0-9]/g, '_'),
+      name,
+      initials,
+      lavados,
+      pagoEstimado,
+      totalFracc: Number(totalFracc.toFixed(1)),
+      genCount: Number(genCount.toFixed(1)),
+      senCount: Number(senCount.toFixed(1)),
+      enjCount: Number(enjCount.toFixed(1)),
+      totalHorasStr
+    });
+  }
+
+  // Ordenar alfabéticamente
+  workersData.sort((a, b) => a.name.localeCompare(b.name));
+
+  const promedioNomina = lavadoresActivosCount > 0 
+    ? Math.round(totalNominaGlobal / lavadoresActivosCount) 
+    : 0;
+
   const periodoLabel = (desde && hasta) ? `Del ${desde} al ${hasta}` :
     desde ? `Desde ${desde}` :
-      hasta ? `Hasta ${hasta}` : 'Todo el historial';
-  const totalRegistros = histFiltrado.length;
+      hasta ? `Hasta ${hasta}` : 'Histórico completo';
 
+  // ── Render HTML ──
   let html = `
-    <div class="sec-hdr" style="margin-top: 0; margin-bottom: 28px;">
-      <div class="sec-title" style="font-size: 28px; font-weight: 800; letter-spacing:-0.02em; color:var(--text);">Registro de Lavadores</div>
-      <div style="color: var(--muted); font-size: 15px; margin-top: 6px; font-weight:500;">Historial detallado de los vehículos gestionados por cada integrante del equipo.</div>
+    <!-- Header -->
+    <div class="nom-header">
+      <div class="nom-title">Liquidación de Nómina</div>
+      <div class="nom-sub">Consolidado de servicios y valores devengados por el equipo de lavado.</div>
     </div>
 
-    <div style="background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:20px 24px;margin-bottom:28px;box-shadow:var(--shadow-sm);">
-      <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:16px;">📅 Filtrar por período</div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Desde</label>
-          <input type="date" id="personalDesde" value="${desde}" onchange="_buildPersonalView(state.historial_lavados||[])" style="padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);outline:none;">
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Hasta</label>
-          <input type="date" id="personalHasta" value="${hasta}" onchange="_buildPersonalView(state.historial_lavados||[])" style="padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:14px;color:var(--text);background:var(--bg);outline:none;">
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button onclick="_setQuincena(1)" style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--accent-dim)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)';" onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text)'">1ra Quincena</button>
-          <button onclick="_setQuincena(2)" style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--accent-dim)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)';" onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text)'">2da Quincena</button>
-          <button onclick="_setQuincena(0)" style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--accent-dim)';this.style.borderColor='var(--accent)';this.style.color='var(--accent)';" onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--text)'">Mes completo</button>
-          <button onclick="document.getElementById('personalDesde').value='';document.getElementById('personalHasta').value='';_buildPersonalView(state.historial_lavados||[]);" style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='var(--red-dim)';this.style.borderColor='var(--red)';this.style.color='var(--red)';" onmouseout="this.style.background='var(--bg)';this.style.borderColor='var(--border)';this.style.color='var(--muted)'">✕ Limpiar</button>
-        </div>
-      </div>
-      <div style="margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span style="font-size:12px;background:var(--accent-dim);color:var(--accent);padding:4px 12px;border-radius:20px;font-weight:700;">${periodoLabel}</span>
-          <span style="font-size:12px;color:var(--muted);font-weight:600;">${totalRegistros} lavado${totalRegistros !== 1 ? 's' : ''} en el período</span>
-        </div>
-        ${window.USER_ROLE === 'admin' ? `
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Responsable del reporte</label>
-            <input type="text" id="personalResponsable" placeholder="Nombre de quien firma..." style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--bg);outline:none;width:220px;">
+    <!-- Panel de Filtros -->
+    <div class="nom-filter-panel">
+      <div class="nom-filter-top">
+        <div class="nom-filter-dates">
+          <div class="nom-field">
+            <label class="nom-label">Fecha Desde</label>
+            <input type="date" id="personalDesde" value="${desde}" class="nom-input" onchange="_buildPersonalView(state.historial_lavados||[])">
           </div>
-          <button id="btnExportNomina" onclick="exportarNominaPdf()" style="padding:10px 18px;border:none;border-radius:10px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 12px rgba(22,163,74,0.3);white-space:nowrap;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(22,163,74,0.4)';" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(22,163,74,0.3)';">📄 Exportar Nómina PDF</button>
+          <div class="nom-field">
+            <label class="nom-label">Fecha Hasta</label>
+            <input type="date" id="personalHasta" value="${hasta}" class="nom-input" onchange="_buildPersonalView(state.historial_lavados||[])">
+          </div>
+          <div class="nom-chips-wrap">
+            <button class="nom-chip" onclick="_setQuincena(1)">1ra Quincena</button>
+            <button class="nom-chip" onclick="_setQuincena(2)">2da Quincena</button>
+            <button class="nom-chip" onclick="_setQuincena(0)">Mes Completo</button>
+            <button class="nom-chip nom-chip-clear" onclick="document.getElementById('personalDesde').value='';document.getElementById('personalHasta').value='';_buildPersonalView(state.historial_lavados||[]);">✕ Limpiar</button>
+          </div>
+        </div>
+
+        ${window.USER_ROLE === 'admin' ? `
+        <div class="nom-actions-right">
+          <div class="nom-field">
+            <label class="nom-label">Responsable del reporte</label>
+            <input type="text" id="personalResponsable" placeholder="Firma autorizada..." class="nom-input" style="width: 200px;">
+          </div>
+          <button id="btnExportNomina" onclick="exportarNominaPdf()" class="nom-btn-export">
+            <span class="material-symbols-outlined" style="font-size:18px;">description</span> Exportar Nómina PDF
+          </button>
         </div>
         ` : ''}
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 24px; padding-bottom: 40px;">
+    <!-- Ribbon de KPIs Globales -->
+    <div class="nom-kpi-grid">
+      <div class="nom-kpi-card">
+        <div class="nom-kpi-header">
+          <span class="nom-kpi-label">Total a Liquidar</span>
+          <span class="material-symbols-outlined nom-kpi-icon">payments</span>
+        </div>
+        <div class="nom-kpi-value highlight">$ ${totalNominaGlobal.toLocaleString('es-CO')}</div>
+        <div class="nom-kpi-sub">${periodoLabel}</div>
+      </div>
+
+      <div class="nom-kpi-card">
+        <div class="nom-kpi-header">
+          <span class="nom-kpi-label">Servicios Liquidados</span>
+          <span class="material-symbols-outlined nom-kpi-icon">local_car_wash</span>
+        </div>
+        <div class="nom-kpi-value">${Number(totalServiciosGlobal.toFixed(1))}</div>
+        <div class="nom-kpi-sub">Total servicios en el período</div>
+      </div>
+
+      <div class="nom-kpi-card">
+        <div class="nom-kpi-header">
+          <span class="nom-kpi-label">Personal Activo</span>
+          <span class="material-symbols-outlined nom-kpi-icon">group</span>
+        </div>
+        <div class="nom-kpi-value">${lavadoresActivosCount} <span style="font-size:14px;color:var(--muted);font-weight:600;">/ ${workersData.length}</span></div>
+        <div class="nom-kpi-sub">Especialistas con servicios</div>
+      </div>
+
+      <div class="nom-kpi-card">
+        <div class="nom-kpi-header">
+          <span class="nom-kpi-label">Promedio por Lavador</span>
+          <span class="material-symbols-outlined nom-kpi-icon">analytics</span>
+        </div>
+        <div class="nom-kpi-value">$ ${promedioNomina.toLocaleString('es-CO')}</div>
+        <div class="nom-kpi-sub">Promedio devengado</div>
+      </div>
+    </div>
+
+    <!-- Master Table de Liquidación -->
+    <div class="nom-table-card">
+      <div class="nom-table-wrap">
+        <table class="nom-table">
+          <thead>
+            <tr>
+              <th>Especialista</th>
+              <th style="text-align:center;">Generales</th>
+              <th style="text-align:center;">Sencillos</th>
+              <th style="text-align:center;">Enjuagues</th>
+              <th style="text-align:center;">Total Serv.</th>
+              <th style="text-align:center;">Tiempo</th>
+              <th style="text-align:right;">Monto a Liquidar</th>
+              <th style="text-align:center;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
   `;
 
-  for (const [name, lavados] of Object.entries(lavadores).sort((a, b) => a[0].localeCompare(b[0]))) {
-    let pagoEstimado = 0;
-    let totalLavados = 0;
-    lavados.forEach(l => {
-      const tipo = l.tipo_lavado || 'General';
-      const tarifa = parseFloat(tarifas[tipo] || 0);
-      const nLavadores = (l.lavadores && l.lavadores.length) ? l.lavadores.length : 1;
-      pagoEstimado += tarifa / nLavadores;
-      totalLavados += 1 / nLavadores;
-    });
-    pagoEstimado = Math.round(pagoEstimado);
-    
-    const displayTotalLavados = Number(totalLavados.toFixed(2));
-
-    let listHtml = '';
-    if (lavados.length === 0) {
-      listHtml = `
-        <div style="display:flex; justify-content:center; align-items:center; padding: 40px 0; color: var(--muted2); font-weight: 600; font-size: 14px; text-align: center; border: 2px dashed var(--border); border-radius: 12px; margin-bottom: 12px;">
-          Sin lavados en este período
-        </div>
-      `;
-    } else {
-      listHtml = lavados.map((l, index) => {
-        const tipo = l.tipo_lavado || 'General';
-        let badgeBg = 'rgba(59,130,246,0.1)';
-        let badgeColor = '#2563eb';
-        if (tipo.toLowerCase().includes('sencillo')) { badgeBg = 'rgba(16,185,129,0.1)'; badgeColor = '#059669'; }
-        if (tipo.toLowerCase().includes('enjuague')) { badgeBg = 'rgba(245,158,11,0.1)'; badgeColor = '#d97706'; }
-        const coLavs = (l.lavadores || []).filter(x => x.trim().toUpperCase() !== name);
-        const coInfo = coLavs.length ? `<span style="font-size:10px;color:var(--muted);margin-left:4px;">+ ${coLavs.join(', ')}</span>` : '';
-
-        return `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding: 16px 0; border-bottom: ${index === lavados.length - 1 ? 'none' : '1px solid var(--border)'}; gap: 12px; transition: background 0.2s; border-radius: 8px;">
-            <div style="display:flex; align-items:center; gap: 16px;">
-              <div style="width:40px; height:40px; border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:16px; border:1px solid var(--border2); box-shadow:0 2px 4px rgba(0,0,0,0.02);">🚐</div>
-              <div>
-                <div style="font-weight: 800; color: var(--text); font-size: 16px; letter-spacing: -0.01em;">${l.placa}${coInfo}</div>
-                <div style="font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500;">
-                  <span style="display:inline-block; margin-right:8px;">📅 ${l.fecha}</span>
-                  <span>⏱️ ${l.hora_inicio || '--'} a ${l.hora_fin || '--'}</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <span style="font-size:11px; font-weight:700; padding:6px 14px; border-radius:20px; background: ${badgeBg}; color: ${badgeColor}; text-transform:uppercase; letter-spacing:0.05em;">${tipo}</span>
-            </div>
+  if (workersData.length === 0) {
+    html += `
+      <tr>
+        <td colspan="8" style="text-align:center;padding:48px 16px;color:var(--muted);">
+          <div style="font-size:15px;font-weight:700;color:var(--text);">No hay especialistas registrados</div>
+          <div style="font-size:13px;margin-top:4px;">No se encontraron registros de lavadores en el sistema.</div>
+        </td>
+      </tr>
+    `;
+  } else {
+    workersData.forEach(w => {
+      let subtableHtml = '';
+      if (w.lavados.length === 0) {
+        subtableHtml = `
+          <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px;background:#FFF;border-radius:10px;border:1px dashed var(--border);">
+            Este especialista no registra lavados en el período seleccionado (${periodoLabel}).
           </div>
         `;
-      }).join('');
-    }
+      } else {
+        const sortedLavs = [...w.lavados].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+        subtableHtml = `
+          <div style="overflow-x:auto;">
+            <table class="nom-subtable">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Placa</th>
+                  <th>Tipo</th>
+                  <th>Municipio</th>
+                  <th>Horario</th>
+                  <th>Duración</th>
+                  <th>Co-Lavadores</th>
+                  <th style="text-align:right;">Tarifa Base</th>
+                  <th style="text-align:right;">Liquidado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sortedLavs.map(l => {
+                  const tipo = l.tipo_lavado || 'General';
+                  const tarifaBase = parseFloat(tarifas[tipo] || 0);
+                  const lavsList = (l.lavadores && l.lavadores.length) ? l.lavadores : (l.lavador ? [l.lavador] : []);
+                  const nLav = lavsList.length || 1;
+                  const liqVal = Math.round(tarifaBase / nLav);
+                  const coLavs = lavsList.filter(x => x.trim().toUpperCase() !== w.name);
+                  const coStr = coLavs.length ? coLavs.join(', ') : '—';
+                  const horario = (l.hora_inicio && l.hora_fin) ? `${l.hora_inicio} → ${l.hora_fin}` : (l.hora_inicio || l.hora_llegada || '—');
 
-    html += `
-      <div style="background: #ffffff; border-radius: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; border: 1px solid rgba(226, 232, 240, 0.8); transition: transform 0.3s ease, box-shadow 0.3s ease; display:flex; flex-direction:column; max-height:450px;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 20px 40px rgba(0,0,0,0.08), 0 8px 12px rgba(0,0,0,0.04)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 12px 30px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.02)';">
-        <div style="padding: 24px; background: linear-gradient(to right, #f8fafc, #ffffff); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink:0;">
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <div style="width: 52px; height: 52px; border-radius: 16px; background: var(--blue-dim); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 26px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">🧑‍🔧</div>
-            <div>
-              <div style="font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.02em;">${name}</div>
-              <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;">Especialista de Lavado</div>
-            </div>
+                  return `
+                    <tr>
+                      <td style="font-weight:600;white-space:nowrap;">${l.fecha || '—'}</td>
+                      <td><span class="placa" style="font-size:12px;padding:3px 8px;">${l.placa || '—'}</span></td>
+                      <td><span class="nom-tag">${tipo}</span></td>
+                      <td style="color:var(--muted);font-size:12px;">${l.municipio || '—'}</td>
+                      <td style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${horario}</td>
+                      <td style="color:var(--muted);">${l.duracion || '—'}</td>
+                      <td style="color:var(--muted);font-size:11.5px;">${coStr}</td>
+                      <td style="text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;">$ ${tarifaBase.toLocaleString('es-CO')}</td>
+                      <td style="text-align:right;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;">$ ${liqVal.toLocaleString('es-CO')}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
           </div>
-          <div style="display:flex; gap:12px;">
-            <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
-              <div style="font-size: 16px; font-weight: 800; color: var(--green); line-height: 1;">$ ${pagoEstimado.toLocaleString('es-CO')}</div>
-              <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Nómina período</div>
+        `;
+      }
+
+      html += `
+        <tr class="nom-row">
+          <td>
+            <div class="nom-worker-cell">
+              <div class="nom-avatar">${w.initials}</div>
+              <div>
+                <div class="nom-worker-name">${w.name}</div>
+                <div class="nom-worker-role">Especialista de Lavado</div>
+              </div>
             </div>
-            <div style="text-align: right; background: var(--bg); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border2);">
-              <div style="font-size: 16px; font-weight: 800; color: var(--blue); line-height: 1;">${displayTotalLavados}</div>
-              <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 800; letter-spacing: 0.05em; margin-top: 4px;">Lavados</div>
+          </td>
+          <td style="text-align:center;"><span class="nom-tag">${w.genCount}</span></td>
+          <td style="text-align:center;"><span class="nom-tag">${w.senCount}</span></td>
+          <td style="text-align:center;"><span class="nom-tag">${w.enjCount}</span></td>
+          <td style="text-align:center;"><span class="nom-tag nom-tag-total">${w.totalFracc}</span></td>
+          <td style="text-align:center;color:var(--muted);font-size:12.5px;">${w.totalHorasStr}</td>
+          <td style="text-align:right;">
+            <div class="nom-pay-amount">$ ${w.pagoEstimado.toLocaleString('es-CO')}</div>
+          </td>
+          <td style="text-align:center;">
+            <button class="nom-toggle-btn" id="nom-btn-${w.key}" onclick="toggleNominaDetalle('${w.key}')">
+              Detalle <span class="material-symbols-outlined" style="font-size:16px;">expand_more</span>
+            </button>
+          </td>
+        </tr>
+        <tr id="nom-detail-${w.key}" class="nom-detail-row" style="display:none;">
+          <td colspan="8" style="padding:0;">
+            <div class="nom-detail-box">
+              <div class="nom-detail-title">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--muted);">receipt_long</span>
+                Servicios Detallados — ${w.name} (${w.lavados.length} registros)
+              </div>
+              ${subtableHtml}
             </div>
-          </div>
-        </div>
-        <div style="padding: 0 24px; overflow-y: auto; flex-grow:1; margin-top: 16px;">
-          ${listHtml}
-        </div>
-      </div>
-    `;
+          </td>
+        </tr>
+      `;
+    });
   }
 
-  html += '</div>';
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
   view.innerHTML = html;
 }
 
@@ -304,5 +492,6 @@ async function descargarPDF(tipo_reporte, btnEl) {
 window.exportarNominaPdf = exportarNominaPdf;
 window.renderPersonal = renderPersonal;
 window._setQuincena = _setQuincena;
+window.toggleNominaDetalle = toggleNominaDetalle;
 window._buildPersonalView = _buildPersonalView;
 window.descargarPDF = descargarPDF;

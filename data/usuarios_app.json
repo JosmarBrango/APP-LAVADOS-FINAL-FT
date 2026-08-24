@@ -7,23 +7,9 @@
     "active": true
   },
   {
-    "username": "lavador1",
-    "password": "lav",
-    "name": "Lavador Prueba",
-    "role": "lavador",
-    "active": true
-  },
-  {
     "username": "lavador_a0319b",
     "password": "N/A",
     "name": "ELIFELE SIMANCA",
-    "role": "lavador",
-    "active": true
-  },
-  {
-    "username": "lavador_fd61c5",
-    "password": "N/A",
-    "name": "JAIDER MORENO",
     "role": "lavador",
     "active": true
   },

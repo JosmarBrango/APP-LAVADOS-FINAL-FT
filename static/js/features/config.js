@@ -219,7 +219,10 @@ async function guardarEdicionLavado(id) {
 async function importCSV(e) {
   e.preventDefault();
   const fileInput = document.getElementById('miFile');
-  if (!fileInput.files.length) return;
+  if (!fileInput.files.length) {
+    window.showToast('Por favor selecciona un archivo CSV.', 'err');
+    return;
+  }
 
   const btn = document.getElementById('miBtn');
   btn.disabled = true;
@@ -230,16 +233,25 @@ async function importCSV(e) {
 
   try {
     const res = await fetch('/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.error) { 
-      window.showToast(data.error, 'err'); 
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      window.showToast(`Error en el servidor al procesar el archivo (código ${res.status})`, 'err');
+      return;
+    }
+
+    if (!res.ok || data.error) { 
+      window.showToast(data.error || 'No se pudo procesar el archivo CSV.', 'err'); 
     } else { 
-      window.showToast('Datos importados correctamente ✓'); 
+      const total = data.total_vehiculos || (data.vehiculos ? data.vehiculos.length : '');
+      const msg = total ? `Se importaron ${total} vehículos correctamente ✓` : 'Datos importados correctamente ✓';
+      window.showToast(msg); 
       await window.refreshAllData(); 
       window.closeModal('modalImport'); 
     }
-  } catch { 
-    window.showToast('Error de conexión', 'err'); 
+  } catch (netErr) { 
+    window.showToast('Error de red o conexión con el servidor', 'err'); 
   } finally {
     btn.disabled = false;
     btn.textContent = 'Procesar e Importar';

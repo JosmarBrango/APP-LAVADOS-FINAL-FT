@@ -4,80 +4,96 @@
   <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
     <div>
       <div style="font-size:24px;font-weight:900;letter-spacing:-0.03em;color:var(--text);">Centro de Reportes</div>
-      <div style="color:var(--muted);font-size:13px;margin-top:4px;font-weight:500;">Genera y descarga documentos PDF oficiales para presentar a gerencia.</div>
+      <div style="color:var(--muted);font-size:13.5px;margin-top:4px;font-weight:500;">Genera y descarga documentos PDF oficiales para control operativo y administrativo.</div>
     </div>
     <div style="font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:6px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:0.06em;">4 reportes disponibles</div>
   </div>
 
   <!-- Report rows -->
-  <div style="display:flex;flex-direction:column;gap:12px;">
+  <div style="display:flex;flex-direction:column;gap:14px;">
 
     <!-- 1. Diagnóstico General -->
-    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;box-shadow:var(--shadow-xs);">
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(37,99,235,0.1);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">📊</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Diagnóstico General</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">KPIs de cumplimiento, resumen por municipio y vehículos sin lavado general en el período activo.</div>
+    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:24px;color:var(--text);">analytics</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <input type="text" id="pdfRespDiag" placeholder="Responsable…" class="rc-input" style="width:200px;">
-        <button class="rc-btn" onclick="descargarPDF('diagnostico', this)" style="width:auto;padding:10px 20px;white-space:nowrap;">⬇ Descargar PDF</button>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Diagnóstico General de Flota</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Indicadores clave de cumplimiento mensual, distribución por municipio y alertas de vehículos pendientes.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
+        <input type="text" id="pdfRespDiag" placeholder="Responsable que firma…" class="rc-input" style="width:200px;">
+        <button class="nom-btn-export" onclick="descargarPDF('diagnostico', this)">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar PDF
+        </button>
       </div>
     </div>
 
     <!-- 2. Programación -->
-    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;box-shadow:var(--shadow-xs);">
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(5,150,105,0.1);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">📅</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Propuesta de Programación</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Cronograma de lavados del rango generado. Genera primero la propuesta en la pestaña correspondiente.</div>
-        <div id="pdfRango" style="display:inline-flex;align-items:center;margin-top:6px;font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px dashed var(--border);padding:3px 10px;border-radius:20px;">⚠️ Sin programación activa — genera primero en la pestaña</div>
+    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:24px;color:var(--text);">calendar_month</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Cronograma de Programación</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Plan de lavados proyectado para el rango seleccionado. Requiere haber generado la propuesta previamente.</div>
+        <div id="pdfRango" style="display:inline-flex;align-items:center;margin-top:6px;font-size:11px;font-weight:600;color:var(--muted);background:var(--s2);border:1px dashed var(--border);padding:3px 10px;border-radius:8px;">Sin programación activa</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
         <select id="pdfMaxDia" class="rc-input" style="width:90px;cursor:pointer;">
           <option value="1">1/día</option><option value="2">2/día</option>
           <option value="3" selected>3/día</option>
         </select>
-        <input type="text" id="pdfRespProg" placeholder="Responsable…" class="rc-input" style="width:180px;">
-        <button class="rc-btn" id="btnDescargaProgramacion" onclick="descargarPDF('programacion', this)" style="width:auto;padding:10px 20px;white-space:nowrap;background:var(--green);box-shadow:0 4px 14px rgba(5,150,105,0.3);opacity:0.5;cursor:not-allowed;" disabled>⬇ Descargar PDF</button>
+        <input type="text" id="pdfRespProg" placeholder="Responsable que firma…" class="rc-input" style="width:180px;">
+        <button class="nom-btn-export" id="btnDescargaProgramacion" onclick="descargarPDF('programacion', this)" style="opacity:0.5;cursor:not-allowed;" disabled>
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar PDF
+        </button>
       </div>
     </div>
 
-    <!-- 4. Inventario de Flota -->
-    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;box-shadow:var(--shadow-xs);">
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(220,38,38,0.1);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🚛</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Inventario de Flota</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Listado completo de todos los vehículos con su estado, municipio, supervisor y total de lavados registrados.</div>
+    <!-- 3. Inventario de Flota -->
+    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:24px;color:var(--text);">directions_bus</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;">Inventario Consolidado de Flota</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Listado completo de vehículos con su estado, municipio, supervisor y conteo de lavados registrados.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
         {% if user.get('role') == 'admin' %}
-        <input type="text" id="pdfRespFlota" placeholder="Responsable…" class="rc-input" style="width:200px;">
-        <button class="rc-btn" onclick="descargarPDF('flota', this)" style="width:auto;padding:10px 20px;white-space:nowrap;background:var(--red);box-shadow:0 4px 14px rgba(220,38,38,0.3);">⬇ Descargar PDF</button>
+        <input type="text" id="pdfRespFlota" placeholder="Responsable que firma…" class="rc-input" style="width:200px;">
+        <button class="nom-btn-export" onclick="descargarPDF('flota', this)">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar PDF
+        </button>
         {% else %}
-        <div style="font-size:12px;color:var(--muted);background:var(--s2);padding:8px 16px;border-radius:10px;border:1px solid var(--border);">🔒 Solo para administradores</div>
+        <div style="font-size:12px;color:var(--muted);background:var(--s2);padding:8px 16px;border-radius:10px;border:1px solid var(--border);">Solo para administradores</div>
         {% endif %}
       </div>
     </div>
 
-    <!-- 5. Lavados Diarios FT-OP-15 -->
-    <div class="rpt-row" style="background:linear-gradient(135deg,rgba(139,92,246,0.06) 0%,var(--surface) 100%);border:1px solid rgba(139,92,246,0.25);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.25s;box-shadow:var(--shadow-xs);position:relative;overflow:hidden;">
-      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(to bottom,#8b5cf6,#6d28d9);border-radius:16px 0 0 16px;"></div>
-      <div style="width:52px;height:52px;border-radius:14px;background:rgba(139,92,246,0.12);color:#8b5cf6;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;margin-left:8px;">📄</div>
+    <!-- 4. Lavados Diarios FT-OP-15 -->
+    <div class="rpt-row" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;display:flex;align-items:center;gap:20px;transition:all 0.2s;box-shadow:0 1px 3px rgba(15,23,42,0.03);">
+      <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="material-symbols-outlined" style="font-size:24px;color:var(--text);">fact_check</span>
+      </div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
-          <span style="font-size:15px;font-weight:700;color:var(--text);">Lavados Diarios</span>
-          <span style="font-size:10px;font-weight:800;background:#8b5cf6;color:#fff;padding:2px 8px;border-radius:20px;letter-spacing:0.04em;">FT-OP-15</span>
+          <span style="font-size:15px;font-weight:700;color:var(--text);">Planilla de Lavados Diarios</span>
+          <span style="font-size:10px;font-weight:800;background:var(--s2);color:var(--muted);border:1px solid var(--border);padding:2px 8px;border-radius:6px;letter-spacing:0.04em;">FT-OP-15</span>
         </div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Planilla oficial diaria de control de tiempos de lavado vehicular. Selecciona la fecha del día a reportar.</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.5;">Planilla oficial de control de tiempos de lavado vehicular con firma del supervisor y lavador.</div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;">
         <input type="date" id="pdfFechaDiario" class="rc-input" style="width:130px;" title="Desde">
         <input type="date" id="pdfFechaDiarioHasta" class="rc-input" style="width:130px;" title="Hasta">
-        <input type="text" id="pdfRespDiario" placeholder="Responsable…" class="rc-input" style="width:160px;">
-        <button class="rc-btn" onclick="descargarPDF('diarios', this)" style="width:auto;padding:10px 20px;white-space:nowrap;background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 14px rgba(139,92,246,0.35);">⬇ Descargar PDF</button>
+        <input type="text" id="pdfRespDiario" placeholder="Responsable que firma…" class="rc-input" style="width:160px;">
+        <button class="nom-btn-export" onclick="descargarPDF('diarios', this)">
+          <span class="material-symbols-outlined" style="font-size:18px;">download</span> Descargar PDF
+        </button>
       </div>
     </div>
 
   </div>
 </div>
+

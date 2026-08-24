@@ -6,6 +6,7 @@ Blueprint para endpoints misceláneos:
   POST /upload
 """
 import os
+import logging
 from flask import Blueprint, jsonify, request, current_app
 from werkzeug.utils import secure_filename
 from core.auth_helpers import login_required, admin_required
@@ -28,32 +29,50 @@ def api_last_qr_event():
 @login_required
 @admin_required
 def upload():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No se recibió ningún archivo.'}), 400
+    filepath = None
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se recibió ningún archivo.'}), 400
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nombre de archivo vacío.'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Nombre de archivo vacío.'}), 400
 
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'Solo se aceptan archivos .csv'}), 400
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Solo se aceptan archivos en formato .csv'}), 400
 
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        if not os.path.isabs(upload_folder):
+            upload_folder = os.path.join(current_app.root_path, upload_folder)
+        os.makedirs(upload_folder, exist_ok=True)
 
-    result = process_csv(filepath)
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(upload_folder, filename)
+        file.save(filepath)
 
-    if os.path.exists(filepath):
-        os.remove(filepath)
+        result = process_csv(filepath)
 
-    if 'error' in result:
-        return jsonify(result), 422
+        if 'error' in result:
+            return jsonify(result), 422
 
-    database.upsert_vehiculos(result.get('vehiculos', []))
+        # Guardar vehículos importados preservando los existentes
+        vehiculos_nuevos = result.get('vehiculos', [])
+        database.upsert_vehiculos(vehiculos_nuevos)
 
-    db_data = get_full_db_data()
-    db_data = recalcular_stats(db_data)
-    save_full_db_data(db_data)
+        # Recalcular estadísticas y persistir
+        db_data = get_full_db_data()
+        db_data = recalcular_stats(db_data)
+        save_full_db_data(db_data)
 
-    return jsonify(db_data)
+        return jsonify({'status': 'ok', 'total_vehiculos': len(vehiculos_nuevos), 'db_data': db_data})
+
+    except Exception as e:
+        logging.exception("Error en /upload:")
+        return jsonify({'error': f'Error en el servidor al procesar el archivo: {str(e)}'}), 500
+    finally:
+        if filepath and os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+

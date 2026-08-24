@@ -3864,4 +3864,420 @@ body {
     font-size: 15px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   VISTA NÓMINA Y RENDIMIENTO — Diseño Corporativo y Elegante
+   ══════════════════════════════════════════════════════════════ */
+
+.nom-header {
+  margin-bottom: 24px;
+}
+.nom-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.nom-sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Panel de Filtros y Acciones */
+.nom-filter-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.nom-filter-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+.nom-filter-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.nom-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.nom-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.nom-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s;
+  height: 38px;
+}
+.nom-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.nom-chips-wrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.nom-chip {
+  padding: 0 12px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+}
+.nom-chip:hover {
+  background: var(--s2);
+  border-color: var(--border2);
+}
+.nom-chip-clear {
+  color: var(--muted);
+}
+.nom-chip-clear:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--red);
+}
+
+.nom-actions-right {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nom-btn-export {
+  padding: 0 18px;
+  height: 38px;
+  background: #0F172A;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.nom-btn-export:hover {
+  background: #1E293B;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+.nom-btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Ribbon de KPIs Globales */
+.nom-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.nom-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.nom-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.nom-kpi-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.nom-kpi-icon {
+  font-size: 18px;
+  color: var(--muted);
+}
+.nom-kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.nom-kpi-value.highlight {
+  color: #0F172A;
+}
+.nom-kpi-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Master Table de Nómina */
+.nom-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  margin-bottom: 32px;
+}
+.nom-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+.nom-table th {
+  background: #F8FAFC;
+  padding: 13px 18px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.nom-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.nom-table tr.nom-row {
+  transition: background 0.15s ease;
+}
+.nom-table tr.nom-row:hover {
+  background: #F8FAFC;
+}
+.nom-table tr.nom-row:last-child td {
+  border-bottom: none;
+}
+
+/* Perfil Lavador en fila */
+.nom-worker-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nom-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #0F172A;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.nom-worker-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.nom-worker-role {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+/* Badges discretos y profesionales */
+.nom-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--s2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.nom-tag-total {
+  font-weight: 700;
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.nom-pay-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.nom-toggle-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nom-toggle-btn:hover {
+  background: #0F172A;
+  color: #FFFFFF;
+  border-color: #0F172A;
+}
+
+/* Detalle desplegable del lavador */
+.nom-detail-row {
+  background: #F8FAFC;
+}
+.nom-detail-box {
+  padding: 16px 20px 20px 20px;
+  border-top: 1px dashed var(--border);
+}
+.nom-detail-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nom-subtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  background: #FFFFFF;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.nom-subtable th {
+  background: #F1F5F9;
+  padding: 9px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.nom-subtable td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  color: var(--text);
+}
+.nom-subtable tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive para Nómina */
+@media (max-width: 900px) {
+  .nom-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .nom-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .nom-kpi-card {
+    padding: 12px 14px;
+  }
+  .nom-kpi-value {
+    font-size: 18px;
+  }
+  .nom-filter-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nom-filter-dates {
+    width: 100%;
+  }
+  .nom-field {
+    flex: 1;
+    min-width: 130px;
+  }
+  .nom-actions-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nom-btn-export {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+  }
+  .nom-table-card {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .nom-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+}
+
 

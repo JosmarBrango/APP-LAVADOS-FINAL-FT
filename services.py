@@ -87,188 +87,264 @@ def process_csv(filepath):
       - stats: métricas KPI
       - chartData: datos para los gráficos
     """
-    df = None
-    for sep in [';', ',']:
-        for enc in ['utf-8-sig', 'latin1', 'utf-8']:
+    try:
+        df = None
+        separators = [';', ',', '\t', '|']
+        encodings  = ['utf-8-sig', 'latin1', 'utf-8', 'cp1252', 'iso-8859-1']
+
+        # Detección inteligente de fila de encabezado (busca 'PLACA')
+        header_row = 0
+        for enc in encodings:
             try:
-                df = pd.read_csv(filepath, sep=sep, encoding=enc, skiprows=2, header=0)
-                if df.shape[1] > 3:
+                with open(filepath, 'r', encoding=enc, errors='ignore') as f:
+                    for line_idx, line in enumerate(f):
+                        if line_idx > 25:
+                            break
+                        if 'PLACA' in line.upper():
+                            header_row = line_idx
+                            break
+                if header_row is not None:
                     break
             except Exception:
                 continue
+
+        # Intentar lectura con los separadores y codificaciones posibles
+        for sep in separators:
+            for enc in encodings:
+                try:
+                    temp_df = pd.read_csv(filepath, sep=sep, encoding=enc, skiprows=header_row, header=0, low_memory=False)
+                    if temp_df.shape[1] >= 2:
+                        cols_upper = [str(c).strip().upper() for c in temp_df.columns]
+                        if any('PLACA' in c for c in cols_upper):
+                            df = temp_df
+                            break
+                except Exception:
+                    continue
+            if df is not None:
+                break
+
+        # Fallback sin skiprows si no se detectó
+        if df is None:
+            for sep in separators:
+                for enc in encodings:
+                    try:
+                        temp_df = pd.read_csv(filepath, sep=sep, encoding=enc, header=0, low_memory=False)
+                        if temp_df.shape[1] >= 2:
+                            df = temp_df
+                            break
+                    except Exception:
+                        continue
+                if df is not None:
+                    break
+
+        if df is None or df.empty:
+            return {'error': 'No se pudo leer el archivo CSV. Verifica el formato.'}
+
+        # Normalizar nombres de columnas
+        df.columns = [str(c).strip().upper() for c in df.columns]
+
+        # Encontrar la columna PLACA exacta o aproximada
+        placa_col = None
+        for c in df.columns:
+            if c == 'PLACA':
+                placa_col = c
+                break
+            if 'PLACA' in c:
+                placa_col = c
+
+        if not placa_col:
+            return {'error': 'El archivo no contiene ninguna columna con el nombre PLACA.'}
+
+        if placa_col != 'PLACA':
+            df.rename(columns={placa_col: 'PLACA'}, inplace=True)
+
+        # Si existe columna ITEM, filtrar numéricos; si no, continuar directamente
+        if 'ITEM' in df.columns:
+            item_numeric = pd.to_numeric(df['ITEM'], errors='coerce')
+            if item_numeric.notna().sum() > 0:
+                df = df[item_numeric.notna()].copy()
+
+        # Validación y limpieza de placa
+        PLACA_PATTERN = r'^[A-Z]{3}\d{2,3}[A-Z]?$'
+        df['PLACA'] = df['PLACA'].astype(str).str.strip().str.upper()
+        df = df[df['PLACA'].str.match(PLACA_PATTERN, na=False)].copy()
+
+        if df.empty:
+            return {'error': 'No se encontraron registros de placas válidas en el archivo.'}
+
+        # Parsear fechas y día de semana
+        fecha_col = next((c for c in df.columns if 'FECHA' in c), None)
+        if fecha_col:
+            results = df.apply(lambda r: parse_fecha(r.get(fecha_col, '')), axis=1)
+            df['FECHA_P'] = results.apply(lambda x: x[0])
+            df['DOW']     = results.apply(lambda x: x[1])
         else:
-            continue
-        break
+            df['FECHA_P'] = pd.NaT
+            df['DOW']     = -1
 
-    if df is None or df.empty:
-        return {'error': 'No se pudo leer el archivo CSV.'}
+        # Identificar columna de hora de llegada a lavadero
+        hora_lav_col = None
+        for c in df.columns:
+            if 'LLEGADA' in c and 'LAVADERO' in c:
+                hora_lav_col = c
+                break
+        if not hora_lav_col:
+            for c in df.columns:
+                if 'LLEGADA' in c or 'HORA LLEG' in c:
+                    hora_lav_col = c
+                    break
 
-    # Filtrar filas de vehículos con ITEM numérico
-    df = df[pd.to_numeric(df['ITEM'], errors='coerce').notna()].copy()
-    if 'PLACA' not in df.columns:
-        return {'error': 'El archivo no contiene la columna PLACA.'}
+        if hora_lav_col:
+            df['HORA_LAV_MIN'] = df[hora_lav_col].astype(str).apply(parse_time)
+        else:
+            df['HORA_LAV_MIN'] = None
 
-    # ─── MEJORA #5: Validación de placa más robusta ───────────────────────────
-    # Acepta ABC123 y formatos alternativos colombianos
-    PLACA_PATTERN = r'^[A-Z]{3}\d{2,3}[A-Z]?$'
-    df['PLACA'] = df['PLACA'].str.strip().str.upper()
-    df = df[df['PLACA'].str.match(PLACA_PATTERN, na=False)].copy()
+        df_lav = df[(df['HORA_LAV_MIN'].notna()) & (df['HORA_LAV_MIN'] > 0)].copy()
 
-    if df.empty:
-        return {'error': 'No se encontraron datos de vehículos válidos en el archivo.'}
+        # Helper para extraer valor más frecuente
+        def mode_val(series):
+            m = series.dropna().mode()
+            return str(m.iloc[0]).strip() if len(m) > 0 else ''
 
-    # Parsear fechas y día de semana
-    results = df.apply(lambda r: parse_fecha(r.get('FECHA', '')), axis=1)
-    df['FECHA_P'] = results.apply(lambda x: x[0])
-    df['DOW']     = results.apply(lambda x: x[1])
-    df['HORA_LAV_MIN'] = df.get('HORA LLEGADA A LAVADERO', pd.Series(dtype=str)).apply(parse_time)
+        _INVALID_STRS = {'', '0', '0.0', '0:00', '00:00', 'nan', 'none', 'n/d', 'null', 'undefined'}
 
-    df_lav = df[(df['HORA_LAV_MIN'].notna()) & (df['HORA_LAV_MIN'] > 0)].copy()
+        def clean_str(val) -> str:
+            if pd.isna(val):
+                return ''
+            s = str(val).strip()
+            if s.lower() in _INVALID_STRS:
+                return ''
+            return s.upper()
 
-    # Metadatos por placa (valor más frecuente)
-    def mode_val(series):
-        m = series.mode()
-        return str(m.iloc[0]) if len(m) > 0 else ''
+        def clean_mun(val) -> str:
+            if pd.isna(val):
+                return ''
+            s = str(val).strip()
+            if s.lower() in _INVALID_STRS or s.replace(':', '').replace('.', '').isdigit():
+                return ''
+            return s.upper()
 
-    # Valores de texto que no son válidos (números, vacíos, horas mal leídas)
-    _INVALID_STRS = {'', '0', '0.0', '0:00', '00:00', 'nan', 'none', 'n/d', 'null', 'undefined'}
+        # Columnas de metadatos aproximadas
+        sup_col = next((c for c in df.columns if 'SUPERVISOR' in c or 'SUP' in c), None)
+        mun_col = next((c for c in df.columns if 'MUNICIPIO' in c or 'MUN' in c or 'CIUDAD' in c), None)
+        tipo_col = next((c for c in df.columns if 'TIPO DE VEHICULO' in c or 'TIPO' in c or 'CLASE' in c), None)
+        ruta_col = next((c for c in df.columns if 'RUTA' in c and 'NOMBRE' not in c), None)
 
-    def clean_str(val) -> str:
-        if pd.isna(val):
-            return ''
-        s = str(val).strip()
-        if s.lower() in _INVALID_STRS:
-            return ''
-        return s.upper()
+        sup_map  = df.groupby('PLACA')[sup_col].agg(mode_val)  if sup_col  else pd.Series(dtype=str)
+        mun_map  = df.groupby('PLACA')[mun_col].agg(mode_val)  if mun_col  else pd.Series(dtype=str)
+        tipo_map = df.groupby('PLACA')[tipo_col].agg(mode_val) if tipo_col else pd.Series(dtype=str)
 
-    def clean_mun(val) -> str:
-        """Devuelve '' si el valor de municipio es inválido o no reconocible."""
-        if pd.isna(val):
-            return ''
-        s = str(val).strip()
-        if s.lower() in _INVALID_STRS or s.replace(':', '').replace('.', '').isdigit():
-            return ''
-        return s.upper()
+        if ruta_col:
+            ruta_df  = df[df[ruta_col].astype(str).str.strip().isin(['0', '']) == False]
+            ruta_map = ruta_df.groupby('PLACA')[ruta_col].agg(mode_val) if not ruta_df.empty else pd.Series(dtype=str)
+        else:
+            ruta_map = pd.Series(dtype=str)
 
-    sup_map  = df.groupby('PLACA')['SUPERVISOR'].agg(mode_val)        if 'SUPERVISOR'      in df.columns else pd.Series(dtype=str)
-    mun_map  = df.groupby('PLACA')['MUNICIPIO'].agg(mode_val)         if 'MUNICIPIO'       in df.columns else pd.Series(dtype=str)
-    tipo_map = df.groupby('PLACA')['TIPO DE VEHICULO'].agg(mode_val)  if 'TIPO DE VEHICULO' in df.columns else pd.Series(dtype=str)
+        # % Rural
+        rural_prefixes = ['AR', 'MU', 'BA', 'SP', 'SJ', 'NE']
+        if not df_lav.empty and ruta_col:
+            df_lav = df_lav.copy()
+            df_lav['PREFIJO']  = df_lav[ruta_col].astype(str).str[:2].str.upper()
+            df_lav['ES_RURAL'] = df_lav['PREFIJO'].isin(rural_prefixes)
+            pct_rural = (df_lav.groupby('PLACA')['ES_RURAL'].mean() * 100).round(0)
+        else:
+            pct_rural = pd.Series(dtype=float)
 
-    ruta_df  = df[df.get('RUTA', '0') != '0']
-    ruta_map = ruta_df.groupby('PLACA')['RUTA'].agg(mode_val) if not ruta_df.empty else pd.Series(dtype=str)
-
-    # % Rural
-    rural_prefixes = ['AR', 'MU', 'BA', 'SP', 'SJ', 'NE']
-    df_lav = df_lav.copy()
-    df_lav['PREFIJO']  = df_lav.get('RUTA', pd.Series(dtype=str)).str[:2]
-    df_lav['ES_RURAL'] = df_lav['PREFIJO'].isin(rural_prefixes)
-    pct_rural = (df_lav.groupby('PLACA')['ES_RURAL'].mean() * 100).round(0) if not df_lav.empty else pd.Series(dtype=float)
-
-    # ─── MEJORA #4: Promedios con filtro IQR de outliers ─────────────────────
-    if not df_lav.empty:
-        avg_dow = (
-            df_lav.groupby(['PLACA', 'DOW'])['HORA_LAV_MIN']
-            .agg(
-                mean_min=promediar_con_iqr,
-                count='count',
-                std_min=std_sin_outliers
+        # Promedios con filtro IQR
+        if not df_lav.empty:
+            avg_dow = (
+                df_lav.groupby(['PLACA', 'DOW'])['HORA_LAV_MIN']
+                .agg(
+                    mean_min=promediar_con_iqr,
+                    count='count',
+                    std_min=std_sin_outliers
+                )
+                .round(1)
+                .reset_index()
             )
-            .round(1)
-            .reset_index()
-        )
-    else:
-        avg_dow = pd.DataFrame(columns=['PLACA', 'DOW', 'mean_min', 'count', 'std_min'])
+            hora_gral = int(promediar_con_iqr(df_lav['HORA_LAV_MIN']))
+        else:
+            avg_dow = pd.DataFrame(columns=['PLACA', 'DOW', 'mean_min', 'count', 'std_min'])
+            hora_gral = 0
 
-    # Promedio general (con IQR también)
-    if not df_lav.empty:
-        hora_gral = int(promediar_con_iqr(df_lav['HORA_LAV_MIN']))
-    else:
-        hora_gral = 0
+        # Promedio llegada por municipio
+        if not df_lav.empty:
+            df_lav['MUN'] = df_lav['PLACA'].map(mun_map).apply(clean_mun)
+            df_lav_mun_valido = df_lav[df_lav['MUN'] != '']
+            mun_avg = (
+                df_lav_mun_valido.groupby('MUN')['HORA_LAV_MIN']
+                .mean()
+                .round(2)
+                .apply(lambda x: round(x / 60, 4))
+                .sort_values()
+                .to_dict()
+            ) if not df_lav_mun_valido.empty else {}
+        else:
+            mun_avg = {}
 
-    # Promedio llegada por municipio (excluir municipios inválidos)
-    df_lav['MUN'] = df_lav['PLACA'].map(mun_map).apply(
-        lambda x: clean_mun(x) if pd.notna(x) else ''
-    )
-    df_lav_mun_valido = df_lav[df_lav['MUN'] != '']
-    mun_avg = (
-        df_lav_mun_valido.groupby('MUN')['HORA_LAV_MIN']
-        .mean()
-        .round(2)
-        .apply(lambda x: round(x / 60, 4))
-        .sort_values()
-        .to_dict()
-    ) if not df_lav_mun_valido.empty else {}
-
-    # Tipos de lavado (Ya no importamos del CSV)
-    tipo_lavado = {
-        'Enjuague': 0,
-        'Sencillo': 0,
-        'General':  0,
-    }
-
-    # Ya no se importan lavados desde el CSV
-    historial_lavados = []
-
-    # Construir lista de vehículos
-    placas = sorted(df['PLACA'].unique())
-    vehiculos = []
-    for placa in placas:
-        veh = {
-            'placa':    placa,
-            'mun':      clean_mun(mun_map.get(placa, '')),
-            'tipo':     clean_str(tipo_map.get(placa, '')),
-            'ruta':     clean_str(ruta_map.get(placa, '')),
-            'pctRural': int(pct_rural.get(placa, 0)),
-            'sup':      clean_str(sup_map.get(placa, '')),
-            'lavGen':   0,
-            'ultimo':   'NUNCA',
-            'horaDow':  {}
-        }
-        veh_dow = avg_dow[avg_dow['PLACA'] == placa]
-        for _, row in veh_dow.iterrows():
-            d  = int(row['DOW'])
-            mm = int(row['mean_min'])
-            veh['horaDow'][d] = {
-                's':   mins_to_str(mm),
-                'm':   mm,
-                'n':   int(row['count']),
-                'std': round(float(row['std_min']), 1) if not pd.isna(row['std_min']) else 0
+        # Construir lista consolidada de vehículos
+        placas = sorted(df['PLACA'].unique())
+        vehiculos = []
+        for placa in placas:
+            veh = {
+                'placa':    placa,
+                'mun':      clean_mun(mun_map.get(placa, '')),
+                'tipo':     clean_str(tipo_map.get(placa, '')),
+                'ruta':     clean_str(ruta_map.get(placa, '')),
+                'pctRural': int(pct_rural.get(placa, 0)) if pd.notna(pct_rural.get(placa, 0)) else 0,
+                'sup':      clean_str(sup_map.get(placa, '')),
+                'lavGen':   0,
+                'ultimo':   'NUNCA',
+                'horaDow':  {}
             }
-        vehiculos.append(veh)
+            veh_dow = avg_dow[avg_dow['PLACA'] == placa]
+            for _, row in veh_dow.iterrows():
+                try:
+                    d  = int(row['DOW'])
+                    mm = int(row['mean_min'])
+                    veh['horaDow'][d] = {
+                        's':   mins_to_str(mm),
+                        'm':   mm,
+                        'n':   int(row['count']),
+                        'std': round(float(row['std_min']), 1) if not pd.isna(row['std_min']) else 0
+                    }
+                except Exception:
+                    pass
+            vehiculos.append(veh)
 
-    total_veh = len(placas)
-    total_gen = 0
-    sin_gen   = total_veh
-    n_meses   = 1
-    meta      = total_veh * n_meses
-    deficit   = meta - total_gen
-    pct_cum   = 0
+        total_veh = len(placas)
+        total_gen = 0
+        sin_gen   = total_veh
+        n_meses   = 1
+        meta      = total_veh * n_meses
+        deficit   = meta - total_gen
+        pct_cum   = 0
 
-    mes_labels = []
-    mes_data   = []
-    periodo    = "Sin datos"
+        dias_reg = int(df['FECHA_P'].dropna().nunique()) if 'FECHA_P' in df.columns else 0
 
-    return {
-        'vehiculos': vehiculos,
-        'historial_lavados': historial_lavados,
-        'stats': {
-            'total_veh':   total_veh,
-            'total_gen':   total_gen,
-            'sin_gen':     sin_gen,
-            'meta':        meta,
-            'deficit':     deficit,
-            'pct_cum':     pct_cum,
-            'n_meses':     n_meses,
-            'hora_gral':   mins_to_str(hora_gral),
-            'periodo':     periodo,
-            'dias_reg':    int(df['FECHA_P'].nunique()),
-        },
-        'chartData': {
-            'lavadosPorMes': {'labels': mes_labels, 'data': mes_data, 'meta': total_veh},
-            'munAvg':        mun_avg,
-            'tiposLavado':   tipo_lavado,
+        return {
+            'vehiculos': vehiculos,
+            'historial_lavados': [],
+            'stats': {
+                'total_veh':   total_veh,
+                'total_gen':   total_gen,
+                'sin_gen':     sin_gen,
+                'meta':        meta,
+                'deficit':     deficit,
+                'pct_cum':     pct_cum,
+                'n_meses':     n_meses,
+                'hora_gral':   mins_to_str(hora_gral),
+                'periodo':     'Sin datos',
+                'dias_reg':    dias_reg,
+            },
+            'chartData': {
+                'lavadosPorMes': {'labels': [], 'data': [], 'meta': total_veh},
+                'munAvg':        mun_avg,
+                'tiposLavado':   {'Enjuague': 0, 'Sencillo': 0, 'General': 0},
+            }
         }
-    }
+    except Exception as e:
+        return {'error': f'Error al procesar el archivo CSV: {str(e)}'}
 
 
 # ─── Algoritmo de Programación Equitativa ────────────────────────────────────
