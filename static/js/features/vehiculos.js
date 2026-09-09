@@ -28,17 +28,59 @@ function renderVehiculos() {
     return;
   }
 
+  // Pre-computar conteo de lavados por tipo para cada placa
+  const washCounts = {};
+  const historial = window.state.historial || window.state.historial_lavados || [];
+  historial.forEach(l => {
+    const p = (l.placa || '').toUpperCase().trim();
+    if (!p) return;
+    if (!washCounts[p]) {
+      washCounts[p] = { gen: 0, alist: 0, mot: 0, total: 0 };
+    }
+    let tl = (l.tipo_lavado || l.tipo || '').trim();
+    if (tl === 'Alistamiento' || tl === 'Sencillo') {
+      washCounts[p].alist++;
+    } else if (tl === 'Motor' || tl === 'Enjuague') {
+      washCounts[p].mot++;
+    } else {
+      washCounts[p].gen++;
+    }
+    washCounts[p].total++;
+  });
+
   bodyEl.innerHTML = data.map(v => {
     const munFormatted = window.formatVal(v.mun);
     const tipoFormatted = window.isInvalidVal(v.tipo) 
       ? window.formatVal(v.tipo) 
       : `<span class="badge veh-tipo-badge">${v.tipo}</span>`;
-    const rutaFormatted = window.isInvalidVal(v.ruta)
-      ? window.formatVal(v.ruta)
-      : `<span class="veh-ruta-tag">${v.ruta}</span>`;
     const supFormatted = window.isInvalidVal(v.sup)
       ? window.formatVal(v.sup)
       : `<span class="veh-sup-text">${v.sup}</span>`;
+
+    const placaClean = (v.placa || '').toUpperCase().trim();
+    const c = washCounts[placaClean] || { gen: 0, alist: 0, mot: 0, total: 0 };
+
+    const lavadosHtml = `
+      <div class="veh-lav-pills" title="Total: ${c.total} lavado(s) registrado(s)">
+        <span class="veh-pill veh-pill-gen ${c.gen === 0 ? 'is-zero' : ''}" title="General: ${c.gen} lavado(s)">
+          <span class="veh-pill-dot"></span>
+          <span class="veh-pill-name">Gen</span>
+          <span class="veh-pill-count">${c.gen}</span>
+        </span>
+        <span class="veh-pill-veh-sep">·</span>
+        <span class="veh-pill veh-pill-alist ${c.alist === 0 ? 'is-zero' : ''}" title="Alistamiento: ${c.alist} lavado(s)">
+          <span class="veh-pill-dot"></span>
+          <span class="veh-pill-name">Alist</span>
+          <span class="veh-pill-count">${c.alist}</span>
+        </span>
+        <span class="veh-pill-veh-sep">·</span>
+        <span class="veh-pill veh-pill-mot ${c.mot === 0 ? 'is-zero' : ''}" title="Motor: ${c.mot} lavado(s)">
+          <span class="veh-pill-dot"></span>
+          <span class="veh-pill-name">Motor</span>
+          <span class="veh-pill-count">${c.mot}</span>
+        </span>
+      </div>
+    `;
 
     return `
     <tr class="veh-row">
@@ -51,9 +93,9 @@ function renderVehiculos() {
         <span class="veh-label-mob">Tipo</span>
         <span class="veh-val-mob">${tipoFormatted}</span>
       </td>
-      <td class="td-ruta" data-label="Ruta">
-        <span class="veh-label-mob">Ruta</span>
-        <span class="veh-val-mob">${rutaFormatted}</span>
+      <td class="td-lavados" data-label="Lavados por Tipo" style="text-align:center;">
+        <span class="veh-label-mob">Lavados por Tipo</span>
+        ${lavadosHtml}
       </td>
       <td class="td-sup" data-label="Supervisor">
         <span class="veh-label-mob">Supervisor</span>

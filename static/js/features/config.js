@@ -18,6 +18,7 @@ function switchConfigTab(tabId, btnEl) {
     loadUsers();
   } else if (tabId === 'nomina') {
     loadTarifas();
+    loadTarifasVehiculo();
   }
 }
 
@@ -25,8 +26,12 @@ async function loadTarifas() {
   try {
     const data = await window.apiCall('/api/config/tarifas');
     document.getElementById('tarifaGeneral').value = '$ ' + (data['General'] || 0).toLocaleString('es-CO');
-    document.getElementById('tarifaSencillo').value = '$ ' + (data['Sencillo'] || 0).toLocaleString('es-CO');
-    document.getElementById('tarifaEnjuague').value = '$ ' + (data['Enjuague'] || 0).toLocaleString('es-CO');
+    const valAli = data['Alistamiento'] !== undefined ? data['Alistamiento'] : (data['Sencillo'] || 0);
+    const valMot = data['Motor'] !== undefined ? data['Motor'] : (data['Enjuague'] || 0);
+    const elAli = document.getElementById('tarifaAlistamiento') || document.getElementById('tarifaSencillo');
+    const elMot = document.getElementById('tarifaMotor') || document.getElementById('tarifaEnjuague');
+    if (elAli) elAli.value = '$ ' + valAli.toLocaleString('es-CO');
+    if (elMot) elMot.value = '$ ' + valMot.toLocaleString('es-CO');
   } catch (e) {
     // API Wrapper maneja error
   }
@@ -42,12 +47,15 @@ document.addEventListener('input', e => {
 
 async function saveTarifas(e) {
   e.preventDefault();
-  const getVal = (id) => parseFloat(document.getElementById(id).value.replace(/\D/g, '')) || 0;
+  const getVal = (id) => {
+    const el = document.getElementById(id);
+    return el ? (parseFloat(el.value.replace(/\D/g, '')) || 0) : 0;
+  };
 
   const data = {
     'General': getVal('tarifaGeneral'),
-    'Sencillo': getVal('tarifaSencillo'),
-    'Enjuague': getVal('tarifaEnjuague'),
+    'Alistamiento': getVal('tarifaAlistamiento') || getVal('tarifaSencillo'),
+    'Motor': getVal('tarifaMotor') || getVal('tarifaEnjuague'),
   };
 
   const btn = e.target.querySelector('button');
@@ -56,13 +64,72 @@ async function saveTarifas(e) {
 
   try {
     await window.apiCall('/api/config/tarifas', 'POST', data);
-    window.showToast('Tarifas actualizadas ✓');
+    window.showToast('Tarifas de lavado actualizadas ✓');
     window.state._tarifas = data;
     await window.refreshAllData();
   } catch (err) {
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Guardar Tarifas';
+    btn.textContent = 'Guardar Tarifas de Lavado';
+  }
+}
+
+// ─── Tarifas por Tipo de Vehículo ──────────────────────────────────────────────
+async function loadTarifasVehiculo() {
+  try {
+    const [tipos, tarifas] = await Promise.all([
+      window.apiCall('/api/config/tipos-vehiculo'),
+      window.apiCall('/api/config/tarifas-vehiculo'),
+    ]);
+
+    const container = document.getElementById('tarifasVehiculoFields');
+    if (!container) return;
+
+    // Generar campos dinámicamente, uno por tipo de vehículo
+    container.innerHTML = tipos.map(tipo => {
+      const idSafe = 'tarifaVeh_' + tipo.replace(/\s+/g, '_');
+      const valor = tarifas[tipo] || 0;
+      return `
+        <div class="field">
+          <label style="font-size:11px;letter-spacing:0.05em;">${tipo.toUpperCase()}</label>
+          <div class="input-money">
+            <input type="text" class="money-input" id="${idSafe}"
+              data-tipo="${tipo}" placeholder="$ 0"
+              value="$ ${parseInt(valor, 10).toLocaleString('es-CO')}">
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Guardar tipos en cache para el guardado posterior
+    window._tiposVehiculoCache = tipos;
+  } catch (e) {
+    console.error('Error cargando tarifas de vehículo:', e);
+  }
+}
+
+async function saveTarifasVehiculo(e) {
+  e.preventDefault();
+  const tipos = window._tiposVehiculoCache || [];
+  const data = {};
+
+  tipos.forEach(tipo => {
+    const idSafe = 'tarifaVeh_' + tipo.replace(/\s+/g, '_');
+    const el = document.getElementById(idSafe);
+    data[tipo] = el ? (parseFloat(el.value.replace(/\D/g, '')) || 0) : 0;
+  });
+
+  const btn = document.getElementById('btnGuardarTarifasVeh');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    await window.apiCall('/api/config/tarifas-vehiculo', 'POST', data);
+    window.showToast('Tarifas de vehículo actualizadas ✓');
+    window.state._tarifasVehiculo = data;
+    await window.refreshAllData();
+  } catch (err) {
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar Tarifas de Vehículo'; }
   }
 }
 
@@ -101,7 +168,7 @@ async function loadUsers() {
   }
 }
 
-function toggleUserFields() {
+function toggleUserFields(isEditing = false) {
   const role = document.getElementById('muRole').value;
   const credRow = document.getElementById('muCredencialesRow');
   const userIn = document.getElementById('muUsername');
@@ -114,7 +181,11 @@ function toggleUserFields() {
   } else {
     credRow.style.display = 'flex';
     userIn.setAttribute('required', 'true');
-    passIn.setAttribute('required', 'true');
+    if (isEditing) {
+      passIn.removeAttribute('required');
+    } else {
+      passIn.setAttribute('required', 'true');
+    }
   }
 }
 
@@ -125,10 +196,14 @@ function openUserModal() {
   document.getElementById('muRole').value = 'lavador';
   document.getElementById('muUsername').value = '';
   document.getElementById('muUsername').readOnly = false;
+  document.getElementById('muPassword').value = '';
+  document.getElementById('muPassword').placeholder = '••••••••';
+  const hint = document.getElementById('muPasswordHint');
+  if (hint) hint.textContent = '';
   document.getElementById('muDocumento').value = '';
   document.getElementById('muTelefono').value = '';
   document.getElementById('muActive').checked = true;
-  toggleUserFields();
+  toggleUserFields(false);
   window.openModal('modalUser');
 }
 
@@ -141,13 +216,16 @@ function editUser(username) {
   document.getElementById('muSub').textContent = `Modificando datos de ${u.name}`;
   document.getElementById('muUsername').value = u.username;
   document.getElementById('muUsername').readOnly = true;
-  document.getElementById('muPassword').value = u.password || ''; 
+  document.getElementById('muPassword').value = ''; 
+  document.getElementById('muPassword').placeholder = 'Dejar en blanco para no cambiar';
+  const hint = document.getElementById('muPasswordHint');
+  if (hint) hint.textContent = '(dejar en blanco para no cambiar)';
   document.getElementById('muName').value = u.name;
   document.getElementById('muRole').value = u.role;
   document.getElementById('muDocumento').value = u.documento || '';
   document.getElementById('muTelefono').value = u.telefono || '';
   document.getElementById('muActive').checked = u.active;
-  toggleUserFields();
+  toggleUserFields(true);
 
   window.openModal('modalUser');
 }
@@ -288,6 +366,8 @@ async function importCSV(e) {
 window.switchConfigTab = switchConfigTab;
 window.loadTarifas = loadTarifas;
 window.saveTarifas = saveTarifas;
+window.loadTarifasVehiculo = loadTarifasVehiculo;
+window.saveTarifasVehiculo = saveTarifasVehiculo;
 window.loadUsers = loadUsers;
 window.toggleUserFields = toggleUserFields;
 window.openUserModal = openUserModal;

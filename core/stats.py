@@ -7,7 +7,7 @@ Lógica de negocio central:
   - Funciones helper de tiempo
 """
 import database
-from core.auth_helpers import load_config
+from core.auth_helpers import load_config, TIPOS_VEHICULO
 
 
 # ─── Acceso a datos ───────────────────────────────────────────────────────────
@@ -164,11 +164,35 @@ def recalcular_stats(db_data: dict, mes_filtro: str = None) -> dict:
 
     # ── Stats de lavadores ────────────────────────────────────────────────────
     config  = load_config()
-    tarifas = config.get('tarifas', {"General": 0, "Sencillo": 0, "Enjuague": 0})
+    tarifas = config.get('tarifas', {"General": 0, "Alistamiento": 0, "Motor": 0})
+    tarifas_vehiculo = config.get('tarifas_vehiculo', {})
     lavadores_stats = {}
+
+    # Mapa rápido placa → tipo de vehículo (normalizado en mayúsculas para comparar)
+    tipo_por_placa = {
+        v.get('placa', '').upper().strip(): (v.get('tipo') or '').strip()
+        for v in vehiculos
+    }
+
+    # Ayudante para encontrar la tarifa del tipo de vehículo de una placa
+    def _tarifa_vehiculo(placa: str) -> float:
+        tipo_raw = tipo_por_placa.get((placa or '').upper().strip(), '')
+        # Buscar coincidencia exacta primero, luego parcial (case-insensitive)
+        for tv in TIPOS_VEHICULO:
+            if tipo_raw.upper() == tv.upper():
+                return float(tarifas_vehiculo.get(tv, 0))
+        for tv in TIPOS_VEHICULO:
+            if tv.upper() in tipo_raw.upper() or tipo_raw.upper() in tv.upper():
+                return float(tarifas_vehiculo.get(tv, 0))
+        return 0.0
 
     for h in historial:
         tipo_lavado = h.get('tipo_lavado', 'General')
+        tipo_norm = tipo_lavado
+        if tipo_norm == 'Sencillo': tipo_norm = 'Alistamiento'
+        elif tipo_norm == 'Enjuague': tipo_norm = 'Motor'
+
+        placa       = h.get('placa', '')
         minutos     = calc_minutos(h.get('hora_inicio'), h.get('hora_fin'))
         lavadores   = h.get('lavadores', [])
         if not lavadores:
@@ -179,9 +203,14 @@ def recalcular_stats(db_data: dict, mes_filtro: str = None) -> dict:
         if n_lavadores == 0:
             continue
 
-        tarifa_total        = float(tarifas.get(tipo_lavado, 0))
+        tarifa_lav          = float(tarifas.get(tipo_norm, tarifas.get(tipo_lavado, 0)))
+        tarifa_veh          = _tarifa_vehiculo(placa)
+        tarifa_total        = tarifa_lav + tarifa_veh
         pago_por_lavador    = round(tarifa_total / n_lavadores, 0) if n_lavadores > 0 else 0
         minutos_por_lavador = round(minutos / n_lavadores) if n_lavadores > 0 else minutos
+
+        # Tipo de vehículo para desglose por lavador
+        tipo_veh_nombre = tipo_por_placa.get((placa or '').upper().strip(), 'Otro') or 'Otro'
 
         for lavador in lavadores:
             lavador = lavador.strip().upper()
@@ -191,20 +220,24 @@ def recalcular_stats(db_data: dict, mes_filtro: str = None) -> dict:
                 'total_lavados':        0,
                 'tiempo_total_minutos': 0,
                 'pago_estimado':        0,
-                'tipos':                {'General': 0, 'Sencillo': 0, 'Enjuague': 0},
+                'tipos':                {'General': 0, 'Alistamiento': 0, 'Motor': 0},
+                'vehiculos_tipos':      {},
             })
             fraccion = 1.0 / n_lavadores
             l_stat['total_lavados']        += fraccion
             l_stat['tiempo_total_minutos'] += minutos_por_lavador
             l_stat['pago_estimado']        += pago_por_lavador
-            l_stat['tipos'][tipo_lavado]    = l_stat['tipos'].get(tipo_lavado, 0) + fraccion
+            l_stat['tipos'][tipo_norm]      = l_stat['tipos'].get(tipo_norm, 0) + fraccion
+            l_stat['vehiculos_tipos'][tipo_veh_nombre] = (
+                l_stat['vehiculos_tipos'].get(tipo_veh_nombre, 0) + fraccion
+            )
 
     # ── Promedios de tiempo ───────────────────────────────────────────────────
     total_espera, lavados_con_espera = 0, 0
     tiempo_por_tipo = {
-        'General':  {'t': 0, 'c': 0},
-        'Sencillo': {'t': 0, 'c': 0},
-        'Enjuague': {'t': 0, 'c': 0},
+        'General':      {'t': 0, 'c': 0},
+        'Alistamiento': {'t': 0, 'c': 0},
+        'Motor':        {'t': 0, 'c': 0},
     }
 
     for h in historial:
@@ -214,6 +247,8 @@ def recalcular_stats(db_data: dict, mes_filtro: str = None) -> dict:
             lavados_con_espera += 1
         t_lavado = h.get('tiempo_lavado')
         t_tipo   = h.get('tipo_lavado', 'General')
+        if t_tipo == 'Sencillo': t_tipo = 'Alistamiento'
+        elif t_tipo == 'Enjuague': t_tipo = 'Motor'
         if t_lavado is not None and isinstance(t_lavado, (int, float)) and t_tipo in tiempo_por_tipo:
             tiempo_por_tipo[t_tipo]['t'] += t_lavado
             tiempo_por_tipo[t_tipo]['c'] += 1

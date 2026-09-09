@@ -184,7 +184,7 @@ def exportar_nomina_pdf():
         return jsonify({'error': 'Sin datos cargados.'}), 400
 
     config   = load_config()
-    tarifas  = config.get('tarifas', {'General': 0, 'Sencillo': 0, 'Enjuague': 0})
+    tarifas  = config.get('tarifas', {'General': 0, 'Alistamiento': 0, 'Motor': 0})
     historial = db_data.get('historial_lavados', [])
 
     pdf_bytes = generar_nomina_pdf(historial, tarifas, responsable, desde, hasta)

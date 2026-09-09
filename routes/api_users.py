@@ -15,9 +15,19 @@ from core.auth_helpers import (
     load_users, save_users,
     load_config, save_config,
     get_system_lavadores,
+    hash_password,
+    TIPOS_VEHICULO,
 )
 
 api_users_bp = Blueprint('api_users', __name__)
+
+
+def _sanitize_user(u: dict) -> dict:
+    """Elimina contraseñas/hashes antes de enviar datos al cliente frontend."""
+    safe = dict(u)
+    safe['has_password'] = bool(u.get('password') and u.get('password') != 'N/A')
+    safe.pop('password', None)
+    return safe
 
 
 @api_users_bp.route('/api/lavadores', methods=['GET'])
@@ -31,7 +41,7 @@ def api_get_lavadores():
 @login_required
 @admin_required
 def api_get_users():
-    return jsonify(load_users())
+    return jsonify([_sanitize_user(u) for u in load_users()])
 
 
 @api_users_bp.route('/api/users/save', methods=['POST'])
@@ -50,20 +60,26 @@ def api_save_user():
     if not name:
         return jsonify({'error': 'El nombre completo es obligatorio.'}), 400
 
-    if role == 'lavador' and not username:
-        username = f"lavador_{uuid.uuid4().hex[:6]}"
-        if not password:
-            password = "N/A"
-
-    if role == 'admin' and (not username or not password):
-        return jsonify({'error': 'Usuario y contraseña son requeridos para cuentas de administrador.'}), 400
-
     users    = load_users()
-    existing = next((u for u in users if u['username'] == username), None)
+    existing = next((u for u in users if u['username'] == username), None) if username else None
+
+    if role == 'lavador':
+        if not username:
+            username = f"lavador_{uuid.uuid4().hex[:6]}"
+        password_val = "N/A"
+    else:
+        # Rol admin
+        if not existing and (not username or not password):
+            return jsonify({'error': 'Usuario y contraseña son requeridos para nuevas cuentas de administrador.'}), 400
+        if existing and password:
+            password_val = hash_password(password)
+        elif existing and not password:
+            password_val = existing.get('password', '')
+        else:
+            password_val = hash_password(password)
 
     if existing:
-        if password and password != "N/A":
-            existing['password'] = password
+        existing['password']  = password_val
         existing['name']      = name
         existing['role']      = role
         existing['documento'] = documento
@@ -72,7 +88,7 @@ def api_save_user():
     else:
         users.append({
             'username':  username,
-            'password':  password,
+            'password':  password_val,
             'name':      name,
             'role':      role,
             'documento': documento,
@@ -81,7 +97,7 @@ def api_save_user():
         })
 
     save_users(users)
-    return jsonify({'success': True, 'users': users})
+    return jsonify({'success': True, 'users': [_sanitize_user(u) for u in users]})
 
 
 @api_users_bp.route('/api/users/delete', methods=['POST'])
@@ -92,7 +108,7 @@ def api_delete_user():
     username = data.get('username', '').strip()
     users    = [u for u in load_users() if u['username'] != username]
     save_users(users)
-    return jsonify({'success': True, 'users': users})
+    return jsonify({'success': True, 'users': [_sanitize_user(u) for u in users]})
 
 
 @api_users_bp.route('/api/config/tarifas', methods=['GET'])
@@ -100,7 +116,7 @@ def api_delete_user():
 @admin_required
 def api_get_tarifas():
     config = load_config()
-    return jsonify(config.get('tarifas', {"General": 0, "Sencillo": 0, "Enjuague": 0}))
+    return jsonify(config.get('tarifas', {"General": 0, "Alistamiento": 0, "Motor": 0}))
 
 
 @api_users_bp.route('/api/config/tarifas', methods=['POST'])
@@ -112,3 +128,29 @@ def api_save_tarifas():
     config['tarifas'] = data
     save_config(config)
     return jsonify({'success': True, 'tarifas': data})
+
+
+@api_users_bp.route('/api/config/tipos-vehiculo', methods=['GET'])
+@login_required
+def api_get_tipos_vehiculo():
+    """Retorna la lista canónica de tipos de vehículo del negocio."""
+    return jsonify(TIPOS_VEHICULO)
+
+
+@api_users_bp.route('/api/config/tarifas-vehiculo', methods=['GET'])
+@login_required
+@admin_required
+def api_get_tarifas_vehiculo():
+    config = load_config()
+    return jsonify(config.get('tarifas_vehiculo', {tv: 0 for tv in TIPOS_VEHICULO}))
+
+
+@api_users_bp.route('/api/config/tarifas-vehiculo', methods=['POST'])
+@login_required
+@admin_required
+def api_save_tarifas_vehiculo():
+    data   = request.json or {}
+    config = load_config()
+    config['tarifas_vehiculo'] = data
+    save_config(config)
+    return jsonify({'success': True, 'tarifas_vehiculo': data})

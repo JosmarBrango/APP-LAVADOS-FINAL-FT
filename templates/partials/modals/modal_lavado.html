@@ -6,7 +6,7 @@
         <div class="modal-title">Registrar lavado</div>
         <div class="modal-sub" style="margin-bottom:0;">Registra un lavado realizado para actualizar los indicadores.</div>
       </div>
-      <button type="button" onclick="closeModal('modalLavado')" style="background:var(--s2);border:1.5px solid var(--border);border-radius:12px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;flex-shrink:0;transition:all 0.15s ease;" title="Cerrar">✕</button>
+      <button type="button" onclick="closeModal('modalLavado')" style="background:var(--s2);border:1.5px solid var(--border);border-radius:12px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;flex-shrink:0;transition:all 0.15s ease;" title="Cerrar">&#x2715;</button>
     </div>
     <form id="formLavado" onsubmit="saveLavado(event)" class="lav-modal-form">
 
@@ -20,11 +20,11 @@
         </div>
         <div class="lav-form-field">
           <label class="lav-form-label">Tipo de lavado</label>
-          <select id="mlTipoLavado" required class="lav-form-input lav-form-select">
+          <select id="mlTipoLavado" required class="lav-form-input lav-form-select" onchange="mlActualizarChecklist(this.value)">
             <option value="" disabled selected>Selecciona...</option>
             <option value="General">Lavado General</option>
-            <option value="Sencillo">Lavado Sencillo</option>
-            <option value="Enjuague">Solo Enjuague</option>
+            <option value="Alistamiento">Lavado Alistamiento</option>
+            <option value="Motor">Lavado Motor</option>
           </select>
         </div>
       </div>
@@ -48,7 +48,7 @@
           </div>
         </div>
         <button type="button" id="btnAddMlLavador" onclick="addModalLavRow()" class="lav-add-lav-btn">
-          ＋ Agregar otro lavador
+          &#xff0b; Agregar otro lavador
         </button>
       </div>
 
@@ -61,7 +61,7 @@
         <input type="hidden" id="mlFecha">
       </div>
 
-      <!-- Fila 5: Horas — 3 campos en grilla 2+1 en mobile -->
+      <!-- Fila 5: Horas -->
       <div class="lav-form-field">
         <label class="lav-form-label">Tiempos del lavado</label>
         <div class="lav-times-grid">
@@ -82,11 +82,49 @@
 
       <!-- Badge tiempos calculados -->
       <div id="mlCalcBadges" style="display:none;gap:8px;flex-wrap:wrap;">
-        <span class="lav-calc-badge">⏳ Espera: <b id="mlValEspera">—</b></span>
-        <span class="lav-calc-badge">🚿 Duración: <b id="mlValLavado">—</b></span>
+        <span class="lav-calc-badge">&#x23F3; Espera: <b id="mlValEspera">&#x2014;</b></span>
+        <span class="lav-calc-badge">&#x1F6BF; Duración: <b id="mlValLavado">&#x2014;</b></span>
+      </div>
+
+      <!-- SECCIÓN: Evidencia fotográfica (opcional) -->
+      <div style="height:1px;background:var(--border);margin:16px 0 14px;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">&#x1F4F7; Evidencia fotográfica</span>
+        <span style="font-size:10px;font-weight:600;color:var(--green,#10B981);background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:1px 7px;">Opcional</span>
+      </div>
+
+      <div id="mlFotoPreviewWrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;"></div>
+
+      <!-- Botones de captura del panel -->
+      <div style="display:flex;gap:10px;margin-bottom:4px;" id="mlFotoBtnsWrap">
+        <button type="button" id="mlBtnCamara" onclick="mlAbrirCamara()"
+          style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:10px;background:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .2s;box-shadow:0 3px 10px rgba(14,165,233,0.3);">
+          <span>&#x1F4F7;</span>
+          <span id="mlBtnCamaraTxt">Tomar foto</span>
+        </button>
+        <label for="mlInputFotos" id="mlBtnGaleria"
+          style="display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:10px 14px;background:var(--s2);border:1.5px solid var(--border);border-radius:12px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all .2s;">
+          <span>&#x1F5BC;&#xFE0F;</span>
+          <span>Galería</span>
+        </label>
+      </div>
+      <input type="file" id="mlInputFotos" accept="image/*" multiple style="display:none;" onchange="mlAgregarFotosPreview(this)">
+      <input type="file" id="mlInputCamaraNativa" accept="image/*" capture="environment" style="display:none;" onchange="mlAgregarFotosPreview(this)">
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;">Máx. 3 fotos · Click en una foto para eliminarla</div>
+
+
+      <!-- SECCIÓN: Checklist de calidad (opcional) -->
+      <div style="height:1px;background:var(--border);margin:16px 0 14px;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">&#x2705; Verificación de calidad</span>
+        <span style="font-size:10px;font-weight:600;color:var(--muted);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:1px 7px;">Opcional</span>
+      </div>
+      <div id="mlChecklistWrap" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
+        <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px;">Selecciona el tipo de lavado primero</div>
       </div>
 
       <!-- Botones -->
+      <div style="height:1px;background:var(--border);margin:16px 0 14px;"></div>
       <div class="btn-row lav-btn-row">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modalLavado')">Cancelar</button>
         <button type="submit" class="btn btn-em">Registrar lavado</button>

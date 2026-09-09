@@ -9,8 +9,9 @@ import os
 import logging
 import threading
 import webbrowser
+from datetime import timedelta
 
-from flask import Flask
+from flask import Flask, send_from_directory
 import database
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
@@ -27,9 +28,21 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Deshabilitar caché estática en desarrollo
 
+# ─── Configuración de Sesión Segura ──────────────────────────────────────────
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # ─── Inicialización ───────────────────────────────────────────────────────────
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'evidencias'), exist_ok=True)
 database.init_db()
+
+# ─── Ruta para servir fotos de evidencia ─────────────────────────────────────
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), app.config['UPLOAD_FOLDER'])
+    return send_from_directory(upload_dir, filename)
 
 # ─── Registro de blueprints ───────────────────────────────────────────────────
 from routes.auth             import auth_bp

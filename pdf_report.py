@@ -337,15 +337,15 @@ def _reporte_lavadores(historial, vehiculos, responsable, lavadores_stats=None):
     # Totales por Lavador
     pdf.set_font('Helvetica', 'B', 9)
     pdf.set_text_color(*C_BLACK)
-    pdf.cell(0, 6, 'Totales por Lavador (Generales / Sencillos / Enjuagues):', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 6, 'Totales por Lavador (Generales / Alistamientos / Motores):', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font('Helvetica', '', 9)
     for lavador, data in sorted(lavadores_stats.items()):
         tipos = data.get('tipos', {})
         t_gen = f"{tipos.get('General', 0):g}"
-        t_sen = f"{tipos.get('Sencillo', 0):g}"
-        t_enj = f"{tipos.get('Enjuague', 0):g}"
+        t_ali = f"{tipos.get('Alistamiento', tipos.get('Sencillo', 0)):g}"
+        t_mot = f"{tipos.get('Motor', tipos.get('Enjuague', 0)):g}"
         pdf.cell(10, 6, '', new_x=XPos.RIGHT)
-        pdf.cell(0, 6, f'{_t(lavador)}: {t_gen} Generales, {t_sen} Sencillos, {t_enj} Enjuagues', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.cell(0, 6, f'{_t(lavador)}: {t_gen} Generales, {t_ali} Alistamientos, {t_mot} Motores', new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     _firma_coordinador(pdf)
     return bytes(pdf.output())
@@ -549,7 +549,7 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
 
     for lav_name in sorted(por_lavador.keys()):
         lavs = por_lavador[lav_name]
-        tc = {'General': 0.0, 'Sencillo': 0.0, 'Enjuague': 0.0}
+        tc = {'General': 0.0, 'Alistamiento': 0.0, 'Motor': 0.0}
         pago_w = 0.0
         mins_w = 0.0
 
@@ -559,34 +559,34 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
             fracc = 1.0 / n_lav
 
             t_low = tipo.lower()
-            if 'sencillo' in t_low:
-                tc['Sencillo'] += fracc
-            elif 'enjuague' in t_low:
-                tc['Enjuague'] += fracc
+            if 'alistamiento' in t_low or 'sencillo' in t_low:
+                tc['Alistamiento'] += fracc
+            elif 'motor' in t_low or 'enjuague' in t_low:
+                tc['Motor'] += fracc
             else:
                 tc['General'] += fracc
 
-            tarifa = float(tarifas.get(tipo, 0))
+            tarifa = float(tarifas.get(tipo, tarifas.get('Alistamiento' if ('alistamiento' in t_low or 'sencillo' in t_low) else ('Motor' if ('motor' in t_low or 'enjuague' in t_low) else 'General'), 0)))
             pago_w += tarifa / n_lav
             mins_w += _calc_mins(l.get('hora_inicio', ''), l.get('hora_fin', '')) / n_lav
 
         pago_w_round = round(pago_w)
-        total_serv_w = tc['General'] + tc['Sencillo'] + tc['Enjuague']
+        total_serv_w = tc['General'] + tc['Alistamiento'] + tc['Motor']
 
         total_empresa_pago += pago_w_round
         total_servicios_empresa += total_serv_w
         total_minutos_empresa += mins_w
         sum_gen += tc['General']
-        sum_sen += tc['Sencillo']
-        sum_enj += tc['Enjuague']
+        sum_sen += tc['Alistamiento']
+        sum_enj += tc['Motor']
 
         hrs_str = f'{int(mins_w)//60}h {int(mins_w)%60:02d}m' if mins_w > 0 else '—'
 
         workers.append({
             'name': lav_name.title(),
             'gen': tc['General'],
-            'sen': tc['Sencillo'],
-            'enj': tc['Enjuague'],
+            'sen': tc['Alistamiento'],
+            'enj': tc['Motor'],
             'total_serv': total_serv_w,
             'hrs_str': hrs_str,
             'pago': pago_w_round
@@ -727,7 +727,7 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
 
     # Columnas de tabla de especialistas
     COLS_W = [8, 52, 18, 18, 18, 20, 20, 32]
-    HDRS_W = ['#', 'ESPECIALISTA', 'GENERALES', 'SENCILLOS', 'ENJUAGUES', 'TOTAL SERV.', 'HRS TRAB.', 'TOTAL LIQUIDADO']
+    HDRS_W = ['#', 'ESPECIALISTA', 'GENERALES', 'ALISTAMIENTO', 'MOTOR', 'TOTAL SERV.', 'HRS TRAB.', 'TOTAL LIQUIDADO']
 
     y_th = y_sec1 + 5.5
     pdf.set_fill_color(*C_SUB_BG)
@@ -850,8 +850,10 @@ def _reporte_nomina(historial_raw, tarifas, responsable, desde, hasta):
             pdf.set_line_width(0.2)
             pdf.rect(12, y_d_row, PAGE_W, 5.5, 'FD')
 
-            tipo = l.get('tipo_lavado', 'General')
-            tarifa_u = float(tarifas.get(tipo, 0))
+            tipo_raw = l.get('tipo_lavado', 'General')
+            tipo = 'Alistamiento' if tipo_raw == 'Sencillo' else ('Motor' if tipo_raw == 'Enjuague' else tipo_raw)
+            t_low = tipo_raw.lower()
+            tarifa_u = float(tarifas.get(tipo, tarifas.get(tipo_raw, tarifas.get('Alistamiento' if ('sencillo' in t_low or 'alistamiento' in t_low) else ('Motor' if ('enjuague' in t_low or 'motor' in t_low) else 'General'), 0))))
             lavs_list = l.get('lavadores', []) or ([l.get('lavador')] if l.get('lavador') else [])
             n_lav = len(lavs_list) or 1
             liq_val = tarifa_u / n_lav
@@ -931,7 +933,7 @@ class DiarioReport(FPDF):
         'TIPO DE\nVEHICULO', 'PLACA', 'MUNICIPIO',
         'HORA\nLLEGADA\nLAVADERO', 'HORA\nINGRESO\nLAVADO',
         'TIEMPO\nESPERA', 'HORA\nSALIDA\nLAVADO',
-        'TIEMPO\nLAVADO', 'ENJUA\nGUE', 'SENCI\nLLO',
+        'TIEMPO\nLAVADO', 'MOTOR', 'ALISTA\nMIENTO',
         'GENE\nRAL', 'NOMBRE LAVADOR', 'FIRMA CONDUCTOR'
     ]
 
@@ -1055,8 +1057,8 @@ def _reporte_lavados_diarios(historial: list, vehiculos: list, start_date: str, 
         t_lavado = fmt_min(r.get('tiempo_lavado'))
 
         tipo_lav = (r.get('tipo_lavado') or 'General').upper()
-        enj = 'X' if 'ENJUAGUE' in tipo_lav else ''
-        sen = 'X' if 'SENCILLO' in tipo_lav else ''
+        mot = 'X' if ('MOTOR' in tipo_lav or 'ENJUAGUE' in tipo_lav) else ''
+        ali = 'X' if ('ALISTAMIENTO' in tipo_lav or 'SENCILLO' in tipo_lav) else ''
         gen = 'X' if 'GENERAL'  in tipo_lav else ''
 
         lavs = r.get('lavadores') or []
@@ -1065,7 +1067,7 @@ def _reporte_lavados_diarios(historial: list, vehiculos: list, start_date: str, 
             if lav_raw: lavs = [lav_raw]
         lav_n = _t(', '.join(lavs))
 
-        row_data = [tipo_veh, placa, mun, llegada, inicio, t_espera, fin, t_lavado, enj, sen, gen, lav_n, '']
+        row_data = [tipo_veh, placa, mun, llegada, inicio, t_espera, fin, t_lavado, mot, ali, gen, lav_n, '']
 
         y = pdf.get_y()
         x = 8

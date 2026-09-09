@@ -8,16 +8,13 @@
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#2563EB">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}?v=16">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_v2.css') }}?v=23">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
-    // Si la pestaña/app se acaba de abrir (no hay sesión en memoria de pestaña), forzamos logout por seguridad
-    if (!sessionStorage.getItem('session_active')) {
-      window.location.href = '/logout';
-    }
     window.USER_ROLE = "{{ user.get('role', 'lavador') }}";
   </script>
 </head>
@@ -58,7 +55,8 @@
       <!-- Brand + Collapse -->
       <div class="sb-header">
         <div class="sb-brand">
-          <div class="sb-logo"><span class="material-symbols-outlined" style="font-size: 32px;">local_shipping</span></div>
+          <div class="sb-logo"><span class="material-symbols-outlined" style="font-size: 32px;">local_shipping</span>
+          </div>
           <div class="sb-brand-info">
             <div class="sb-name">Flota Urabá</div>
             <div class="sb-sub">Panel de Lavados</div>
@@ -76,24 +74,30 @@
           </button>
           <div class="nav-group-items">
             <button class="nav-item active" onclick="showView('diagnostico', this)" data-tooltip="Diagnóstico general">
-              <span class="material-symbols-outlined nav-icon">bar_chart</span><span class="nav-text">Diagnóstico general</span>
+              <span class="material-symbols-outlined nav-icon">bar_chart</span><span class="nav-text">Diagnóstico
+                general</span>
             </button>
             <button class="nav-item" onclick="showView('promedios', this)" data-tooltip="Promedios por día">
-              <span class="material-symbols-outlined nav-icon">insights</span><span class="nav-text">Promedios por día</span>
+              <span class="material-symbols-outlined nav-icon">insights</span><span class="nav-text">Promedios por
+                día</span>
             </button>
 
             <button class="nav-item" onclick="showView('programacion', this)" data-tooltip="Propuesta de programación">
-              <span class="material-symbols-outlined nav-icon">calendar_month</span><span class="nav-text">Propuesta de programación</span>
+              <span class="material-symbols-outlined nav-icon">calendar_month</span><span class="nav-text">Propuesta de
+                programación</span>
             </button>
             <button class="nav-item" onclick="showView('vehiculos', this)" data-tooltip="Gestión de vehículos">
-              <span class="material-symbols-outlined nav-icon">local_shipping</span><span class="nav-text">Gestión de vehículos</span>
+              <span class="material-symbols-outlined nav-icon">local_shipping</span><span class="nav-text">Gestión de
+                vehículos</span>
             </button>
 
             <button class="nav-item" onclick="showView('lavados', this)" data-tooltip="Todos los lavados">
-              <span class="material-symbols-outlined nav-icon">local_car_wash</span><span class="nav-text">Todos los lavados</span>
+              <span class="material-symbols-outlined nav-icon">local_car_wash</span><span class="nav-text">Todos los
+                lavados</span>
             </button>
             <button class="nav-item" onclick="showView('historial', this)" data-tooltip="Historial / Escáner QR">
-              <span class="material-symbols-outlined nav-icon">qr_code_scanner</span><span class="nav-text">Historial / Escáner QR</span>
+              <span class="material-symbols-outlined nav-icon">qr_code_scanner</span><span class="nav-text">Historial /
+                Escáner QR</span>
             </button>
           </div>
         </div>
@@ -104,10 +108,12 @@
           </button>
           <div class="nav-group-items">
             <button class="nav-item" onclick="showView('reportes', this)" data-tooltip="Centro de Reportes">
-              <span class="material-symbols-outlined nav-icon">description</span><span class="nav-text">Centro de Reportes</span>
+              <span class="material-symbols-outlined nav-icon">description</span><span class="nav-text">Centro de
+                Reportes</span>
             </button>
             <button class="nav-item" onclick="showView('personal', this)" data-tooltip="Personal y Rendimiento">
-              <span class="material-symbols-outlined nav-icon">engineering</span><span class="nav-text">Personal y Rendimiento</span>
+              <span class="material-symbols-outlined nav-icon">engineering</span><span class="nav-text">Personal y
+                Rendimiento</span>
             </button>
           </div>
         </div>
@@ -119,16 +125,18 @@
           <div class="nav-group-items">
             {% if user.get('role') == 'admin' %}
             <button class="nav-item" onclick="openModal('modalImport')" data-tooltip="Importar CSV">
-              <span class="material-symbols-outlined nav-icon">upload_file</span><span class="nav-text">Importar CSV</span>
+              <span class="material-symbols-outlined nav-icon">upload_file</span><span class="nav-text">Importar
+                CSV</span>
             </button>
             <button class="nav-item" onclick="showView('configuracion', this)" data-tooltip="Configuración">
-              <span class="material-symbols-outlined nav-icon">settings</span><span class="nav-text">Configuración</span>
+              <span class="material-symbols-outlined nav-icon">settings</span><span
+                class="nav-text">Configuración</span>
             </button>
             {% endif %}
             <a href="{{ url_for('auth.logout') }}" class="nav-item" data-tooltip="Cerrar sesión"
               style="text-decoration:none;">
-              <span class="material-symbols-outlined nav-icon" style="color:var(--red)">logout</span><span class="nav-text"
-                style="color:var(--red)">Cerrar sesión</span>
+              <span class="material-symbols-outlined nav-icon" style="color:var(--red)">logout</span><span
+                class="nav-text" style="color:var(--red)">Cerrar sesión</span>
             </a>
           </div>
         </div>
@@ -171,7 +179,7 @@
 
       <!-- Content -->
       <div class="content" id="mainContent" style="display:none">
-          {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
       </div><!-- /content -->
     </main>
   </div>
@@ -204,9 +212,9 @@
   <script src="{{ url_for('static', filename='js/state.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='js/features/diagnostico.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='js/features/programacion.js') }}?v=4"></script>
-  <script src="{{ url_for('static', filename='js/features/vehiculos.js') }}?v=6"></script>
-  <script src="{{ url_for('static', filename='js/features/lavados.js') }}?v=4"></script>
-  <script src="{{ url_for('static', filename='js/features/historial.js') }}?v=4"></script>
+  <script src="{{ url_for('static', filename='js/features/vehiculos.js') }}?v=7"></script>
+  <script src="{{ url_for('static', filename='js/features/lavados.js') }}?v=10"></script>
+  <script src="{{ url_for('static', filename='js/features/historial.js') }}?v=9"></script>
   <script src="{{ url_for('static', filename='js/features/reportes.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='js/features/config.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}?v=4"></script>

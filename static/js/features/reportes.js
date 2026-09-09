@@ -139,16 +139,21 @@ function _buildPersonalView(historial) {
 
     lavados.forEach(l => {
       const tipo = l.tipo_lavado || 'General';
-      const tarifa = parseFloat(tarifas[tipo] || 0);
+      const tLow = tipo.toLowerCase();
+      const tarifaFallback = (tLow.includes('alistamiento') || tLow.includes('sencillo')) 
+        ? (tarifas['Alistamiento'] ?? tarifas['Sencillo'] ?? 0)
+        : ((tLow.includes('motor') || tLow.includes('enjuague'))
+            ? (tarifas['Motor'] ?? tarifas['Enjuague'] ?? 0)
+            : (tarifas['General'] ?? 0));
+      const tarifa = parseFloat(tarifas[tipo] !== undefined ? tarifas[tipo] : tarifaFallback);
       const nLav = (l.lavadores && l.lavadores.length) ? l.lavadores.length : 1;
       const fracc = 1 / nLav;
 
       pagoEstimado += tarifa / nLav;
       totalFracc += fracc;
 
-      const tLow = tipo.toLowerCase();
-      if (tLow.includes('sencillo')) senCount += fracc;
-      else if (tLow.includes('enjuague')) enjCount += fracc;
+      if (tLow.includes('alistamiento') || tLow.includes('sencillo')) senCount += fracc;
+      else if (tLow.includes('motor') || tLow.includes('enjuague')) enjCount += fracc;
       else genCount += fracc;
 
       // Calcular tiempo
@@ -292,8 +297,8 @@ function _buildPersonalView(historial) {
             <tr>
               <th>Especialista</th>
               <th style="text-align:center;">Generales</th>
-              <th style="text-align:center;">Sencillos</th>
-              <th style="text-align:center;">Enjuagues</th>
+              <th style="text-align:center;">Alistamientos</th>
+              <th style="text-align:center;">Motores</th>
               <th style="text-align:center;">Total Serv.</th>
               <th style="text-align:center;">Tiempo</th>
               <th style="text-align:right;">Monto a Liquidar</th>
@@ -342,7 +347,12 @@ function _buildPersonalView(historial) {
               <tbody>
                 ${sortedLavs.map(l => {
                   const tipo = l.tipo_lavado || 'General';
-                  const tarifaBase = parseFloat(tarifas[tipo] || 0);
+                  const tarifaFallback = (tipo === 'Sencillo' || tipo === 'Alistamiento')
+                    ? (tarifas['Alistamiento'] ?? tarifas['Sencillo'] ?? 0)
+                    : ((tipo === 'Enjuague' || tipo === 'Motor')
+                        ? (tarifas['Motor'] ?? tarifas['Enjuague'] ?? 0)
+                        : (tarifas['General'] ?? 0));
+                  const tarifaBase = parseFloat(tarifas[tipo] !== undefined ? tarifas[tipo] : tarifaFallback);
                   const lavsList = (l.lavadores && l.lavadores.length) ? l.lavadores : (l.lavador ? [l.lavador] : []);
                   const nLav = lavsList.length || 1;
                   const liqVal = Math.round(tarifaBase / nLav);
@@ -354,7 +364,7 @@ function _buildPersonalView(historial) {
                     <tr>
                       <td style="font-weight:600;white-space:nowrap;">${l.fecha || '—'}</td>
                       <td><span class="placa" style="font-size:12px;padding:3px 8px;">${l.placa || '—'}</span></td>
-                      <td><span class="nom-tag">${tipo}</span></td>
+                      <td><span class="nom-tag">${tipo === 'Sencillo' ? 'Alistamiento' : (tipo === 'Enjuague' ? 'Motor' : tipo)}</span></td>
                       <td style="color:var(--muted);font-size:12px;">${l.municipio || '—'}</td>
                       <td style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${horario}</td>
                       <td style="color:var(--muted);">${l.duracion || '—'}</td>

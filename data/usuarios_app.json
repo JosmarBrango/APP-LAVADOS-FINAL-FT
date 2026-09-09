@@ -1,7 +1,7 @@
 [
   {
     "username": "admin",
-    "password": "123",
+    "password": "scrypt:32768:8:1$CqVmU1GDD7ZBbBB0$23a3de68c11092838222ce5e63554abcb47a30d7904c14877173585da4d075c762578ba7ea466419f611ae5999bd35bfdb35920e0ff015b51c3392f13df41c3a",
     "name": "Administrador Principal",
     "role": "admin",
     "active": true

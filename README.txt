@@ -49,7 +49,7 @@ FORMATO DEL CSV ESPERADO
     ITEM, PLACA, FECHA, MUNICIPIO, RUTA,
     TIPO DE VEHICULO, SUPERVISOR,
     HORA LLEGADA A LAVADERO,
-    Enjuague, Sencillo , General
+    Motor, Alistamiento , General
 
 ESTRUCTURA DE CARPETAS
 -----------------------

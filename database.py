@@ -163,6 +163,8 @@ def _migrate_columns(conn, c):
         ('tiempo_lavado', 'INTEGER'),
         ('lavadores', 'TEXT'),
         ('municipio', 'VARCHAR(100)'),
+        ('fotos', 'TEXT'),
+        ('checklist', 'TEXT'),
     ]
     
     if DATABASE_URL:
@@ -288,6 +290,14 @@ def add_lavado(lavado_dict):
         lavadores = [lavador_str] if lavador_str else []
     lavadores_json = json.dumps(lavadores, ensure_ascii=False)
     
+    # Fotos: JSON array de rutas relativas
+    fotos = lavado_dict.get('fotos', [])
+    fotos_json = json.dumps(fotos, ensure_ascii=False)
+
+    # Checklist: JSON object {item: bool}
+    checklist = lavado_dict.get('checklist', {})
+    checklist_json = json.dumps(checklist, ensure_ascii=False)
+
     p = (
         lavado_dict.get('placa', ''),
         lavado_dict.get('fecha', ''),
@@ -300,17 +310,19 @@ def add_lavado(lavado_dict):
         lavadores_json,
         lavado_dict.get('tipo_lavado', ''),
         lavado_dict.get('municipio', ''),
-        lavado_dict.get('origen', '')
+        lavado_dict.get('origen', ''),
+        fotos_json,
+        checklist_json,
     )
     
     if DATABASE_URL:
         c.execute('''INSERT INTO lavados 
-                     (placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', p)
+                     (placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen, fotos, checklist) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''', p)
     else:
         c.execute('''INSERT INTO lavados 
-                     (placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', p)
+                     (placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen, fotos, checklist) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', p)
     conn.commit()
     conn.close()
 
@@ -380,15 +392,15 @@ def get_all_lavados(desde=None, hasta=None):
     if desde and hasta:
         if DATABASE_URL:
             c.execute('''SELECT id, placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, 
-                                tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen 
+                                tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen, fotos, checklist
                          FROM lavados WHERE fecha >= %s AND fecha <= %s ORDER BY id DESC''', (desde, hasta))
         else:
             c.execute('''SELECT id, placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, 
-                                tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen 
+                                tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen, fotos, checklist
                          FROM lavados WHERE fecha >= ? AND fecha <= ? ORDER BY id DESC''', (desde, hasta))
     else:
         c.execute('''SELECT id, placa, fecha, hora, hora_llegada, hora_inicio, hora_fin, 
-                            tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen 
+                            tiempo_espera, tiempo_lavado, lavadores, tipo_lavado, municipio, origen, fotos, checklist
                      FROM lavados ORDER BY id DESC''')
     
     rows = c.fetchall()
@@ -401,6 +413,18 @@ def get_all_lavados(desde=None, hasta=None):
             lavadores = json.loads(lavadores_raw) if lavadores_raw else []
         except Exception:
             lavadores = [lavadores_raw] if lavadores_raw else []
+
+        fotos_raw = r[13] if len(r) > 13 else None
+        try:
+            fotos = json.loads(fotos_raw) if fotos_raw else []
+        except Exception:
+            fotos = []
+
+        checklist_raw = r[14] if len(r) > 14 else None
+        try:
+            checklist = json.loads(checklist_raw) if checklist_raw else {}
+        except Exception:
+            checklist = {}
         
         lavados.append({
             'id': r[0],
@@ -417,7 +441,9 @@ def get_all_lavados(desde=None, hasta=None):
             'lavador': lavadores[0] if lavadores else '',
             'tipo_lavado': r[10] or '',
             'municipio': r[11] or '',
-            'origen': r[12] or ''
+            'origen': r[12] or '',
+            'fotos': fotos,
+            'checklist': checklist,
         })
     return lavados
 

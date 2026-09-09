@@ -3,14 +3,40 @@ routes/vistas.py
 ================
 Blueprint para vistas HTML: index principal y registro por QR.
 """
+import os
+import uuid
+import json
 import datetime as dt
-from flask import Blueprint, render_template, request, session, redirect, url_for
+from flask import Blueprint, render_template, request, session, redirect, url_for, current_app
 
 from core.auth_helpers import login_required, load_users, get_system_lavadores
 from core.stats import get_full_db_data, save_full_db_data, recalcular_stats
 import database
 
 vistas_bp = Blueprint('vistas', __name__)
+
+ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif'}
+
+def _save_fotos(files, lavado_id):
+    """Guarda hasta 3 fotos y devuelve lista de URLs relativas."""
+    saved = []
+    for f in files[:3]:
+        if not f or not f.filename:
+            continue
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
+        if ext not in ALLOWED_EXT:
+            continue
+        unique_name = f"{uuid.uuid4().hex}.{ext}"
+        folder = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            current_app.config['UPLOAD_FOLDER'],
+            'evidencias',
+            str(lavado_id)
+        )
+        os.makedirs(folder, exist_ok=True)
+        f.save(os.path.join(folder, unique_name))
+        saved.append(f"/uploads/evidencias/{lavado_id}/{unique_name}")
+    return saved
 
 
 @vistas_bp.route('/')
@@ -58,6 +84,10 @@ def registro_qr(placa):
         if not lavadores:
             lav = request.form.get('lavador', '').strip()
             lavadores = [lav.upper()] if lav else []
+
+        # Checklist de calidad (opcional)
+        checklist_keys = request.form.getlist('checklist_items')
+        checklist = {k: True for k in checklist_keys}
 
         if not fecha or not hora_inicio or not hora_fin or not lavadores or not tipo_lavado:
             return render_template(
@@ -123,8 +153,31 @@ def registro_qr(placa):
             'tipo_lavado':  tipo_lavado,
             'municipio':    municipio,
             'origen':       'qr_registro',
+            'fotos':        [],
+            'checklist':    checklist,
         }
         database.add_lavado(nuevo_lavado)
+
+        # Procesar fotos opcionales (se guardan con el ID del nuevo lavado)
+        fotos_files = request.files.getlist('fotos')
+        if fotos_files and any(f.filename for f in fotos_files):
+            # Obtener el ID del lavado recién insertado
+            todos = database.get_all_lavados()
+            if todos:
+                nuevo_id = todos[0]['id']
+                fotos_urls = _save_fotos(fotos_files, nuevo_id)
+                if fotos_urls:
+                    # Actualizar la BD con las rutas de fotos
+                    conn = database.get_connection()
+                    cur = conn.cursor()
+                    fotos_json = json.dumps(fotos_urls, ensure_ascii=False)
+                    if database.DATABASE_URL:
+                        cur.execute('UPDATE lavados SET fotos=%s WHERE id=%s', (fotos_json, nuevo_id))
+                    else:
+                        cur.execute('UPDATE lavados SET fotos=? WHERE id=?', (fotos_json, nuevo_id))
+                    conn.commit()
+                    conn.close()
+
         db_data['historial_lavados'] = database.get_all_lavados()
 
         import time as _time

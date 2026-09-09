@@ -316,6 +316,264 @@
     .text-red { color: var(--red) !important; }
     .text-green { color: var(--green) !important; }
 
+    /* ── Foto preview ── */
+    .foto-thumb {
+      position: relative;
+      width: 100%;
+      padding-top: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+    }
+    .foto-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .foto-thumb .foto-del {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(15,23,42,0.72);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    /* ── Botones de foto (cámara / galería) ── */
+    .foto-btns-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .btn-camara {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 52px;
+      padding: 12px 10px;
+      background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all .2s;
+      box-shadow: 0 4px 12px rgba(14,165,233,0.32);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-camara:active { transform: scale(0.97); }
+    .btn-galeria {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 52px;
+      padding: 12px 14px;
+      background: var(--card2);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-galeria:active { transform: scale(0.97); }
+
+    /* ── Modal Cámara en Vivo ── */
+    #camaraModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+    }
+    #camaraModal.activo { display: flex; }
+    #camaraVideo {
+      width: 100%;
+      flex: 1;
+      object-fit: cover;
+      display: block;
+      background: #111;
+    }
+    .camara-hud {
+      position: absolute;
+      top: max(16px, env(safe-area-inset-top));
+      left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      pointer-events: none;
+    }
+    .camara-hud > * { pointer-events: auto; }
+    .camara-close {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      border-radius: 50%;
+      width: 42px; height: 42px;
+      color: #fff;
+      font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+    .camara-counter {
+      background: rgba(0,0,0,0.55);
+      border-radius: 20px;
+      padding: 6px 14px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--sans);
+      backdrop-filter: blur(6px);
+      letter-spacing: .04em;
+    }
+    .camara-flip {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      border-radius: 50%;
+      width: 42px; height: 42px;
+      color: #fff;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+    .camara-controles {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 22px 24px max(22px, env(safe-area-inset-bottom));
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(10px);
+    }
+    .camara-thumbnails {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .camara-thumb-item {
+      width: 50px; height: 50px;
+      border-radius: 9px;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    .camara-thumb-empty {
+      width: 50px; height: 50px;
+      border-radius: 9px;
+      border: 2px dashed rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.06);
+    }
+    .btn-obturador {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: #fff;
+      border: 4px solid rgba(255,255,255,0.4);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .1s, box-shadow .1s;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-obturador:active {
+      transform: scale(0.92);
+      box-shadow: 0 0 0 6px rgba(255,255,255,0.3);
+    }
+    .btn-obturador-inner {
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .camara-flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .08s ease;
+    }
+    .camara-flash.on { opacity: 0.7; }
+    .camara-fin-btn {
+      background: #10B981;
+      border: none;
+      border-radius: 50%;
+      width: 52px; height: 52px;
+      color: #fff;
+      font-size: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .camara-fin-btn.visible { opacity: 1; }
+
+    /* ── Checklist ── */
+    .chk-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 13px 14px;
+      cursor: pointer;
+      transition: all .2s ease;
+      user-select: none;
+    }
+    .chk-item.checked {
+      background: #F0FDF4;
+      border-color: #86EFAC;
+    }
+    .chk-item .chk-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 2px solid var(--border);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all .2s ease;
+      font-size: 13px;
+    }
+    .chk-item.checked .chk-box {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .chk-item .chk-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
     /* ── Optimizaciones exclusivas para Celulares ── */
     @media (max-width: 480px) {
       body {
@@ -409,14 +667,14 @@
 
     <div class="section-title">📋 Registrar lavado en sistema</div>
 
-    <form method="POST" id="formReg" autocomplete="off">
+    <form method="POST" id="formReg" autocomplete="off" enctype="multipart/form-data">
       <div class="field">
         <label>Tipo de lavado</label>
-        <select name="tipo_lavado" required>
+        <select name="tipo_lavado" id="selTipoLavado" required onchange="actualizarChecklist(this.value)">
           <option value="" disabled selected>Selecciona una opción...</option>
           <option value="General">Lavado General</option>
-          <option value="Sencillo">Lavado Sencillo</option>
-          <option value="Enjuague">Solo Enjuague</option>
+          <option value="Alistamiento">Lavado Alistamiento</option>
+          <option value="Motor">Lavado Motor</option>
         </select>
       </div>
 
@@ -472,6 +730,42 @@
         <div class="calc-badge" id="badgeLavado">🚿 Lavado: <strong id="valLavado">—</strong></div>
       </div>
 
+      <!-- ──────────────────────────────────────────────────── -->
+      <!-- SECCIÓN: Evidencia fotográfica (opcional)            -->
+      <!-- ──────────────────────────────────────────────────── -->
+      <div class="divider" style="margin:18px 0 16px;"></div>
+      <div class="section-title">📷 Evidencia fotográfica <span style="color:var(--green);font-size:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:6px;padding:2px 7px;text-transform:none;letter-spacing:0;font-weight:600;">Opcional</span></div>
+
+      <div id="fotoPreviewWrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;"></div>
+
+      <!-- Botones de captura -->
+      <div class="foto-btns-wrap" id="fotoBtnsWrap">
+        <button type="button" class="btn-camara" id="btnAbrirCamara" onclick="abrirCamaraModal()">
+          <span style="font-size:20px">📷</span>
+          <span id="btnCamaraTxt">Tomar foto</span>
+        </button>
+        <label class="btn-galeria" for="inputFotos" id="btnGaleria" title="Elegir de galería o archivo">
+          <span style="font-size:16px">🖼️</span>
+          <span>Galería</span>
+        </label>
+      </div>
+      <!-- Input oculto para galería / fallback -->
+      <input type="file" id="inputFotos" name="fotos" accept="image/*" multiple style="display:none;" onchange="agregarFotosPreview(this)">
+      <!-- Input nativo de cámara (fallback sin getUserMedia) -->
+      <input type="file" id="inputCamaraNativa" accept="image/*" capture="environment" style="display:none;" onchange="agregarFotosPreview(this)">
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px;">Máximo 3 fotos · Toca una foto para eliminarla</div>
+
+      <!-- ──────────────────────────────────────────────────── -->
+      <!-- SECCIÓN: Checklist de calidad (opcional)            -->
+      <!-- ──────────────────────────────────────────────────── -->
+      <div class="divider" style="margin:18px 0 16px;"></div>
+      <div class="section-title">✅ Verificación de calidad <span style="color:var(--muted);font-size:10px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;text-transform:none;letter-spacing:0;font-weight:600;">Opcional</span></div>
+      <div id="checklistWrap" style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px;">
+        <div style="font-size:12px;color:var(--muted);text-align:center;padding:10px;">Selecciona el tipo de lavado primero</div>
+      </div>
+
+      <div class="divider" style="margin:18px 0 16px;"></div>
+
       <button type="submit" class="btn-confirm" id="btnConfirm">
         <span style="font-size:20px">✓</span>
         Confirmar Lavado
@@ -482,9 +776,23 @@
   <p class="footer-note">Zona Urabá · Panel de Gestión de Lavados</p>
   {% endif %}
 
+  <script type="application/json" id="lavadoresData">
+    {{ (lavadores_sistema or []) | tojson }}
+  </script>
   <script>
     // Lavadores disponibles en el sistema (inyectados desde Python)
-    let LAVADORES_SISTEMA = {{ lavadores_sistema | tojson }};
+    let LAVADORES_SISTEMA = [];
+    try {
+      const _dataEl = document.getElementById('lavadoresData');
+      if (_dataEl && _dataEl.textContent.trim()) {
+        const _parsed = JSON.parse(_dataEl.textContent);
+        if (Array.isArray(_parsed)) {
+          LAVADORES_SISTEMA = _parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Error al cargar lavadores del sistema:", e);
+    }
 
     // Función para refrescar opciones en caso de que lleguen de forma asíncrona
     async function checkLavadoresSistema() {
@@ -674,6 +982,260 @@
         btn.innerHTML = '<span>⏳</span> Registrando…';
         setTimeout(() => { btn.disabled = true; }, 0);
       });
+
+    // ── Checklist dinámico por tipo de lavado ──────────────────────────────
+    const CHECKLIST_ITEMS = {
+      'Alistamiento': [
+        { key: 'exterior_limpio',    label: 'Exterior limpio' },
+        { key: 'llantas_limpias',    label: 'Llantas y ruedas limpias' },
+      ],
+      'General': [
+        { key: 'exterior_limpio',    label: 'Exterior limpio' },
+        { key: 'llantas_limpias',    label: 'Llantas y ruedas limpias' },
+        { key: 'cero_residuos',      label: 'Cero residuos en la carrocería' },
+      ],
+      'Motor': [
+        { key: 'motor_limpio',       label: 'Motor limpio / sin grasa' },
+      ],
+    };
+
+    function actualizarChecklist(tipo) {
+      const wrap = document.getElementById('checklistWrap');
+      if (!wrap) return;
+      const items = CHECKLIST_ITEMS[tipo] || [];
+      if (!items.length) {
+        wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px;">Sin ítems para este tipo</div>';
+        return;
+      }
+      wrap.innerHTML = items.map(item => `
+        <div class="chk-item" onclick="toggleChk(this)" data-key="${item.key}">
+          <div class="chk-box"></div>
+          <span class="chk-label">${item.label}</span>
+          <input type="checkbox" name="checklist_items" value="${item.key}" style="display:none;">
+        </div>
+      `).join('');
+    }
+
+    function toggleChk(el) {
+      el.classList.toggle('checked');
+      const cb = el.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = el.classList.contains('checked');
+      const box = el.querySelector('.chk-box');
+      if (box) box.textContent = el.classList.contains('checked') ? '✓' : '';
+    }
+
+    // ── Gestión de fotos (preview + DataTransfer para mantener files) ──────
+    let _fotosFiles = []; // Array de File objects seleccionados
+
+    function agregarFotosPreview(input) {
+      const nuevas = Array.from(input.files);
+      const disponibles = 3 - _fotosFiles.length;
+      const aTomar = nuevas.slice(0, disponibles);
+      _fotosFiles = _fotosFiles.concat(aTomar);
+      _renderFotoPreviews();
+      _sincronizarInputFotos();
+      input.value = ''; // Limpiar para permitir volver a seleccionar
+    }
+
+    function _renderFotoPreviews() {
+      const wrap = document.getElementById('fotoPreviewWrap');
+      const btnCamara = document.getElementById('btnAbrirCamara');
+      const btnCamaraTxt = document.getElementById('btnCamaraTxt');
+      const btnWrap = document.getElementById('fotoBtnsWrap');
+      if (!wrap) return;
+
+      wrap.innerHTML = _fotosFiles.map((f, i) => {
+        const url = URL.createObjectURL(f);
+        return `<div class="foto-thumb" title="Toca para eliminar">
+          <img src="${url}" alt="Foto ${i+1}">
+          <button type="button" class="foto-del" onclick="eliminarFoto(${i})" title="Eliminar">✕</button>
+        </div>`;
+      }).join('');
+
+      // Actualizar estado de los botones
+      const lleno = _fotosFiles.length >= 3;
+      if (btnWrap) { btnWrap.style.opacity = lleno ? '0.4' : '1'; btnWrap.style.pointerEvents = lleno ? 'none' : 'auto'; }
+      if (btnCamaraTxt) btnCamaraTxt.textContent = _fotosFiles.length === 0
+        ? 'Tomar foto'
+        : `${_fotosFiles.length}/3 — Otra foto`;
+    }
+
+    function eliminarFoto(idx) {
+      _fotosFiles.splice(idx, 1);
+      _renderFotoPreviews();
+      _sincronizarInputFotos();
+    }
+
+    function _sincronizarInputFotos() {
+      // Sincronizar el input file real con nuestro array usando DataTransfer
+      const inputFotos = document.getElementById('inputFotos');
+      if (!inputFotos) return;
+      try {
+        const dt = new DataTransfer();
+        _fotosFiles.forEach(f => dt.items.add(f));
+        inputFotos.files = dt.files;
+      } catch(e) {
+        // DataTransfer no soportado (Safari antiguo): ignorar
+      }
+    }
+
+    // ── Módulo de Cámara en Vivo ──────────────────────────────────────────
+    let _camaraStream = null;
+    let _camaraFacingMode = 'environment'; // 'environment' = trasera, 'user' = frontal
+    let _camaraCanvas = null;
+
+    async function abrirCamaraModal() {
+      if (_fotosFiles.length >= 3) return;
+
+      // Verificar soporte de getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        _usarCamaraNativa();
+        return;
+      }
+
+      const modal = document.getElementById('camaraModal');
+      if (!modal) { _usarCamaraNativa(); return; }
+
+      modal.classList.add('activo');
+      document.body.style.overflow = 'hidden';
+      _actualizarHUDCamara();
+
+      try {
+        await _iniciarStream();
+      } catch(err) {
+        console.warn('[Cámara] Error al iniciar stream:', err);
+        window.camaraCerrar ? window.camaraCerrar() : cerrarCamaraModal();
+        _usarCamaraNativa();
+      }
+    }
+
+    async function _iniciarStream() {
+      if (_camaraStream) {
+        _camaraStream.getTracks().forEach(t => t.stop());
+        _camaraStream = null;
+      }
+      const video = document.getElementById('camaraVideo');
+      const constraints = {
+        video: {
+          facingMode: { ideal: _camaraFacingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      };
+      _camaraStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = _camaraStream;
+      await video.play();
+    }
+
+    function cerrarCamaraModal() {
+      if (_camaraStream) {
+        _camaraStream.getTracks().forEach(t => t.stop());
+        _camaraStream = null;
+      }
+      const video = document.getElementById('camaraVideo');
+      if (video) { video.srcObject = null; }
+      const modal = document.getElementById('camaraModal');
+      if (modal) modal.classList.remove('activo');
+      document.body.style.overflow = '';
+    }
+
+    async function flipCamara() {
+      _camaraFacingMode = _camaraFacingMode === 'environment' ? 'user' : 'environment';
+      try { await _iniciarStream(); } catch(e) {
+        // revertir si falla
+        _camaraFacingMode = _camaraFacingMode === 'environment' ? 'user' : 'environment';
+        await _iniciarStream();
+      }
+    }
+
+    function capturarFotoCamara() {
+      if (_fotosFiles.length >= 3) {
+        cerrarCamaraModal();
+        return;
+      }
+      const video = document.getElementById('camaraVideo');
+      if (!video || !_camaraStream) return;
+
+      // Flash visual
+      const flash = document.getElementById('camaraFlash');
+      if (flash) {
+        flash.classList.add('on');
+        setTimeout(() => flash.classList.remove('on'), 120);
+      }
+      // Vibración háptica en móviles
+      if (navigator.vibrate) navigator.vibrate(40);
+
+      // Captura en canvas
+      if (!_camaraCanvas) {
+        _camaraCanvas = document.createElement('canvas');
+      }
+      _camaraCanvas.width = video.videoWidth || 1280;
+      _camaraCanvas.height = video.videoHeight || 720;
+      const ctx = _camaraCanvas.getContext('2d');
+      // Si es cámara frontal, voltear horizontalmente para imagen natural
+      if (_camaraFacingMode === 'user') {
+        ctx.translate(_camaraCanvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, _camaraCanvas.width, _camaraCanvas.height);
+
+      _camaraCanvas.toBlob(blob => {
+        if (!blob) return;
+        const timestamp = Date.now();
+        const file = new File([blob], `foto_lavado_${timestamp}.jpg`, { type: 'image/jpeg' });
+        _fotosFiles.push(file);
+        _sincronizarInputFotos();
+        _renderFotoPreviews();
+        _actualizarHUDCamara();
+        _actualizarThumbnailsCamara();
+
+        if (_fotosFiles.length >= 3) {
+          setTimeout(() => cerrarCamaraModal(), 400);
+        }
+      }, 'image/jpeg', 0.88);
+    }
+
+    function _actualizarHUDCamara() {
+      const counter = document.getElementById('camaraCounter');
+      if (counter) counter.textContent = `📷 ${_fotosFiles.length} / 3`;
+      const finBtn = document.getElementById('camaraFinBtn');
+      if (finBtn) finBtn.classList.toggle('visible', _fotosFiles.length > 0);
+    }
+
+    function _actualizarThumbnailsCamara() {
+      const thumbsWrap = document.getElementById('camaraThumbs');
+      if (!thumbsWrap) return;
+      thumbsWrap.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        if (i < _fotosFiles.length) {
+          const url = URL.createObjectURL(_fotosFiles[i]);
+          const img = document.createElement('img');
+          img.src = url;
+          img.className = 'camara-thumb-item';
+          img.alt = `Foto ${i+1}`;
+          thumbsWrap.appendChild(img);
+        } else {
+          const empty = document.createElement('div');
+          empty.className = 'camara-thumb-empty';
+          thumbsWrap.appendChild(empty);
+        }
+      }
+    }
+
+    function _usarCamaraNativa() {
+      // Fallback: disparar input de cámara nativa (abre la app de cámara del SO)
+      const input = document.getElementById('inputCamaraNativa');
+      if (input) input.click();
+    }
+
+    // Exponer funciones de cámara al scope global (necesario para modal_camara.html)
+    window.cerrarCamaraModal = cerrarCamaraModal;
+    window.flipCamara = flipCamara;
+    window.capturarFotoCamara = capturarFotoCamara;
   </script>
+
+  {% include 'partials/modals/modal_camara.html' %}
+
 </body>
 </html>

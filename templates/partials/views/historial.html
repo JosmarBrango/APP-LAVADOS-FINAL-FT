@@ -19,7 +19,8 @@
         <input id="histHasta" type="date" title="Hasta" onchange="renderHistorial()">
       </div>
       <div class="hist-search-row">
-        <input id="histSearch" class="hist-search-input" type="text" placeholder="Buscar placa…" oninput="renderHistorial()">
+        <input id="histSearch" class="hist-search-input" type="text" placeholder="Buscar placa…"
+          oninput="renderHistorial()">
         <button class="btn btn-ghost btn-hist-clear"
           onclick="document.getElementById('histDesde').value='';document.getElementById('histHasta').value='';document.getElementById('histSearch').value='';renderHistorial();">
           ✕ Limpiar
@@ -43,19 +44,19 @@
     <div id="qr-reader" style="width:100%"></div>
   </div>
 
-  <div class="table-wrap hist-table-wrap">
-    <table class="tbl tbl-historial">
+  <div class="table-wrap">
+    <table class="tbl tbl-lavados tbl-historial">
       <thead>
         <tr>
           <th>Placa</th>
+          <th>Municipio</th>
           <th>Tipo</th>
-          <th>Lavadores</th>
           <th>Fecha</th>
-          <th>Llegada</th>
-          <th>Inicio → Fin</th>
-          <th>Espera</th>
-          <th>Duración</th>
-          <th>Origen</th>
+          <th style="text-align:center;">Llegada</th>
+          <th>Lavadores</th>
+          <th style="text-align:center;">INFO</th>
+          <th style="text-align:center;">Origen</th>
+          {% if user.get('role') == 'admin' %}<th style="text-align:right">Acc.</th>{% endif %}
         </tr>
       </thead>
       <tbody id="histBody"></tbody>

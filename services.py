@@ -340,7 +340,7 @@ def process_csv(filepath):
             'chartData': {
                 'lavadosPorMes': {'labels': [], 'data': [], 'meta': total_veh},
                 'munAvg':        mun_avg,
-                'tiposLavado':   {'Enjuague': 0, 'Sencillo': 0, 'General': 0},
+                'tiposLavado':   {'Motor': 0, 'Alistamiento': 0, 'General': 0},
             }
         }
     except Exception as e:

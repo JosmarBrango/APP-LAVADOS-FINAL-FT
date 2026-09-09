@@ -3,10 +3,10 @@
   <div class="lavados-hdr">
     <div>
       <div class="lavados-hdr-title">Registro de Lavados</div>
-      <div class="lavados-hdr-sub">Todos los lavados registrados — General, Sencillo y Enjuague</div>
+      <div class="lavados-hdr-sub">Todos los lavados registrados — General, Alistamiento y Motor</div>
     </div>
-    <button class="btn btn-em" onclick="openLavadoModal()" style="padding:10px 20px;font-size:13px;gap:8px;flex-shrink:0;">
-      <span class="material-symbols-outlined" style="font-size:18px;">add_circle</span> Registrar lavado
+    <button class="btn btn-em" onclick="openLavadoModal()" style="padding:8px 16px;font-size:12.5px;gap:6px;flex-shrink:0;">
+      <span class="material-symbols-outlined" style="font-size:17px;">add_circle</span> Registrar lavado
     </button>
   </div>
 
@@ -30,14 +30,14 @@
       <div class="lav-kpi-icon"><span class="material-symbols-outlined">opacity</span></div>
       <div class="lav-kpi-body">
         <div class="lav-kpi-val" id="lavKpiSen">0</div>
-        <div class="lav-kpi-lbl">Sencillos</div>
+        <div class="lav-kpi-lbl">Alistamientos</div>
       </div>
     </div>
     <div class="lav-kpi-card lav-kpi-enj">
       <div class="lav-kpi-icon"><span class="material-symbols-outlined">shower</span></div>
       <div class="lav-kpi-body">
         <div class="lav-kpi-val" id="lavKpiEnj">0</div>
-        <div class="lav-kpi-lbl">Enjuagues</div>
+        <div class="lav-kpi-lbl">Motores</div>
       </div>
     </div>
   </div>
@@ -51,8 +51,8 @@
         <select id="lavTipo" class="lav-select" onchange="renderTodosLavados()">
           <option value="">Todos los tipos</option>
           <option value="General">General</option>
-          <option value="Sencillo">Sencillo</option>
-          <option value="Enjuague">Enjuague</option>
+          <option value="Alistamiento">Alistamiento</option>
+          <option value="Motor">Motor</option>
         </select>
       </div>
       <div class="lav-filter-group">
@@ -109,19 +109,18 @@
 
   <!-- Tabla -->
   <div class="table-wrap">
-    <table class="tbl">
+    <table class="tbl tbl-lavados">
       <thead>
         <tr>
           <th>Placa</th>
           <th>Municipio</th>
           <th>Tipo</th>
-          <th>Lavadores</th>
           <th>Fecha</th>
-          <th>Llegada</th>
-          <th>Inicio → Fin</th>
-          <th>Espera</th>
-          <th>Duración</th>
-          <th>Origen</th>
+          <th style="text-align:center;">Llegada</th>
+          <th style="text-align:center;">Inicio → Fin</th>
+          <th>Lavadores</th>
+          <th style="text-align:center;">Calidad</th>
+          <th style="text-align:center;">Origen</th>
           {% if user.get('role') == 'admin' %}<th style="text-align:right">Acc.</th>{% endif %}
         </tr>
       </thead>

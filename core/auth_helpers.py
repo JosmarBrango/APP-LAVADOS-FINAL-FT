@@ -8,6 +8,27 @@ import os
 import json
 from functools import wraps
 from flask import session, redirect, url_for, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+# ─── Seguridad y Criptografía de Contraseñas ─────────────────────────────────
+def hash_password(password: str) -> str:
+    """Genera un hash seguro para una contraseña usando scrypt/pbkdf2."""
+    if not password or password == "N/A":
+        return password
+    return generate_password_hash(password)
+
+
+def verify_password(stored_password: str, provided_password: str) -> bool:
+    """
+    Verifica una contraseña provista contra el valor almacenado.
+    Soporta contraseñas hasheadas y compatibilidad de migración con contraseñas legacy.
+    """
+    if not stored_password or not provided_password:
+        return False
+    if stored_password.startswith(('scrypt:', 'pbkdf2:', 'argon2:')):
+        return check_password_hash(stored_password, provided_password)
+    return stored_password == provided_password
 
 
 # ─── Rutas de archivos ────────────────────────────────────────────────────────
@@ -69,6 +90,25 @@ def save_users(users: list) -> None:
         pass
 
 
+# ─── Tipos de vehículo del negocio ──────────────────────────────────────────────
+TIPOS_VEHICULO = [
+    'Doble Troque',
+    'Sencillo',
+    'Volqueta Doble',
+    'Volqueta Sencilla',
+    'Volqueta',
+    'NQR Compactador',
+    'NPR Estaca',
+    'NQR Estaca',
+    'NQR Platon',
+    'NPR',
+    'NQR',
+    'NHR',
+    'Camioneta',
+    'Motocarro',
+    'Doble',
+]
+
 # ─── Configuración (tarifas, etc.) ────────────────────────────────────────────
 def load_config() -> dict:
     # 1. Intentar cargar desde la base de datos
@@ -77,23 +117,40 @@ def load_config() -> dict:
         cfg_db = database.get_data('config')
         if cfg_db and isinstance(cfg_db, dict):
             cfg_db.setdefault('tarifas', {})
-            for t in ['General', 'Sencillo', 'Enjuague']:
+            if 'Sencillo' in cfg_db['tarifas'] and 'Alistamiento' not in cfg_db['tarifas']:
+                cfg_db['tarifas']['Alistamiento'] = cfg_db['tarifas'].pop('Sencillo')
+            if 'Enjuague' in cfg_db['tarifas'] and 'Motor' not in cfg_db['tarifas']:
+                cfg_db['tarifas']['Motor'] = cfg_db['tarifas'].pop('Enjuague')
+            for t in ['General', 'Alistamiento', 'Motor']:
                 cfg_db['tarifas'].setdefault(t, 0)
+            cfg_db.setdefault('tarifas_vehiculo', {})
+            for tv in TIPOS_VEHICULO:
+                cfg_db['tarifas_vehiculo'].setdefault(tv, 0)
             return cfg_db
     except Exception:
         pass
 
     # 2. Fallback a archivo config.json
     path = _data_path('config.json')
-    default_cfg = {"tarifas": {"General": 0, "Sencillo": 0, "Enjuague": 0}}
+    default_cfg = {
+        "tarifas": {"General": 0, "Alistamiento": 0, "Motor": 0},
+        "tarifas_vehiculo": {tv: 0 for tv in TIPOS_VEHICULO},
+    }
     if not os.path.exists(path):
         return default_cfg
     try:
         with open(path, 'r', encoding='utf-8') as f:
             cfg = json.load(f)
         cfg.setdefault('tarifas', {})
-        for t in ['General', 'Sencillo', 'Enjuague']:
+        if 'Sencillo' in cfg['tarifas'] and 'Alistamiento' not in cfg['tarifas']:
+            cfg['tarifas']['Alistamiento'] = cfg['tarifas'].pop('Sencillo')
+        if 'Enjuague' in cfg['tarifas'] and 'Motor' not in cfg['tarifas']:
+            cfg['tarifas']['Motor'] = cfg['tarifas'].pop('Enjuague')
+        for t in ['General', 'Alistamiento', 'Motor']:
             cfg['tarifas'].setdefault(t, 0)
+        cfg.setdefault('tarifas_vehiculo', {})
+        for tv in TIPOS_VEHICULO:
+            cfg['tarifas_vehiculo'].setdefault(tv, 0)
         # Sincronizar a BD
         try:
             import database

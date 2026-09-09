@@ -1,0 +1,184 @@
+﻿<!-- Modal de Camara en Vivo (compartido) -->
+<style>
+  #camaraModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: #000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+  #camaraModal.activo { display: flex; }
+  #camaraVideo {
+    width: 100%;
+    flex: 1;
+    object-fit: cover;
+    display: block;
+    background: #111;
+  }
+  .camara-hud {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    pointer-events: none;
+  }
+  .camara-hud > * { pointer-events: auto; }
+  .camara-close-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    border-radius: 50%;
+    width: 42px; height: 42px;
+    color: #fff;
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .camara-counter-badge {
+    background: rgba(0,0,0,0.55);
+    border-radius: 20px;
+    padding: 6px 14px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    backdrop-filter: blur(6px);
+    letter-spacing: .04em;
+  }
+  .camara-flip-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    border-radius: 50%;
+    width: 42px; height: 42px;
+    color: #fff;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .camara-controles-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    padding: 22px 24px max(22px, env(safe-area-inset-bottom));
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+  }
+  .camara-thumbs-row { display: flex; gap: 8px; align-items: center; }
+  .camara-thumb-item {
+    width: 50px; height: 50px;
+    border-radius: 9px;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+  .camara-thumb-empty {
+    width: 50px; height: 50px;
+    border-radius: 9px;
+    border: 2px dashed rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.06);
+  }
+  .btn-obturador-wrap {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid rgba(255,255,255,0.4);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .1s, box-shadow .1s;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-obturador-wrap:active { transform: scale(0.92); box-shadow: 0 0 0 6px rgba(255,255,255,0.3); }
+  .btn-obturador-inner-circle { width: 58px; height: 58px; border-radius: 50%; background: #fff; }
+  .camara-flash-overlay {
+    position: absolute; inset: 0; background: #fff; opacity: 0;
+    pointer-events: none; transition: opacity .08s ease;
+  }
+  .camara-flash-overlay.on { opacity: 0.7; }
+  .camara-done-btn {
+    background: #10B981; border: none; border-radius: 50%;
+    width: 52px; height: 52px; color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; transition: opacity .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .camara-done-btn.visible { opacity: 1; }
+</style>
+
+<script>
+  /* Funciones globales de enrutamiento del modal de camara.
+     Se definen aqui (script ejecutado sincrono al parsear HTML),
+     por lo que estaran disponibles cuando el usuario haga clic. */
+  window._camaraModo = window._camaraModo || null;
+
+  window.camaraCerrar = function () {
+    if (window._camaraModo === 'ml' && typeof window.mlCerrarCamara === 'function') {
+      window.mlCerrarCamara();
+    } else if (typeof cerrarCamaraModal === 'function') {
+      cerrarCamaraModal();
+    } else {
+      /* Fallback de emergencia: ocultar el modal directamente */
+      var m = document.getElementById('camaraModal');
+      if (m) m.classList.remove('activo');
+      document.body.style.overflow = '';
+      var v = document.getElementById('camaraVideo');
+      if (v) { try { v.srcObject = null; } catch(e){} }
+    }
+  };
+
+  window.camaraCapturar = function () {
+    if (window._camaraModo === 'ml' && typeof window.mlCapturarFoto === 'function') {
+      window.mlCapturarFoto();
+    } else if (typeof capturarFotoCamara === 'function') {
+      capturarFotoCamara();
+    }
+  };
+
+  window.camaraFlip = function () {
+    if (window._camaraModo === 'ml' && typeof window.mlFlipCamara === 'function') {
+      window.mlFlipCamara();
+    } else if (typeof flipCamara === 'function') {
+      flipCamara();
+    }
+  };
+
+  /* Cerrar con tecla Escape */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.camaraCerrar();
+  });
+</script>
+
+<div id="camaraModal" role="dialog" aria-modal="true" aria-label="Camara para tomar fotos">
+  <div class="camara-flash-overlay" id="camaraFlash"></div>
+  <video id="camaraVideo" playsinline autoplay muted></video>
+
+  <!-- HUD superior: cerrar / contador / flip -->
+  <div class="camara-hud">
+    <button type="button" class="camara-close-btn" onclick="window.camaraCerrar()" title="Cerrar camara">&#x2715;</button>
+    <span class="camara-counter-badge" id="camaraCounter">&#x1F4F7; 0 / 3</span>
+    <button type="button" class="camara-flip-btn" onclick="window.camaraFlip()" title="Cambiar camara">&#x1F504;</button>
+  </div>
+
+  <!-- Controles inferiores: miniaturas + obturador + listo -->
+  <div class="camara-controles-bar">
+    <div class="camara-thumbs-row" id="camaraThumbs">
+      <div class="camara-thumb-empty"></div>
+      <div class="camara-thumb-empty"></div>
+      <div class="camara-thumb-empty"></div>
+    </div>
+    <button type="button" class="btn-obturador-wrap" onclick="window.camaraCapturar()" title="Tomar foto">
+      <div class="btn-obturador-inner-circle"></div>
+    </button>
+    <button type="button" class="camara-done-btn" id="camaraFinBtn" onclick="window.camaraCerrar()" title="Listo">&#x2713;</button>
+  </div>
+</div>

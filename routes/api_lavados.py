@@ -3,22 +3,86 @@ routes/api_lavados.py
 =====================
 Blueprint para operaciones de lavados:
   POST /api/lavado/add_manual
+  POST /api/lavado/upload_foto
   POST /api/lavado/remove
   POST /api/lavado/edit_fecha
 """
+import os
+import uuid
+import json
 import datetime as dt
-from flask import Blueprint, jsonify, request
+from werkzeug.utils import secure_filename
+from flask import Blueprint, jsonify, request, current_app
 from core.auth_helpers import login_required, admin_required
 from core.stats import get_full_db_data, save_full_db_data, recalcular_stats, calc_minutos
 import database
 
 api_lavados_bp = Blueprint('api_lavados', __name__)
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic', 'heif'}
+
+def _allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@api_lavados_bp.route('/api/lavado/upload_foto', methods=['POST'])
+@login_required
+def upload_foto_lavado():
+    """Sube hasta 3 fotos para un lavado. Retorna las URLs públicas."""
+    if 'fotos' not in request.files:
+        return jsonify({'error': 'No se encontraron archivos.'}), 400
+
+    files = request.files.getlist('fotos')
+    lavado_id = request.form.get('lavado_id', 'tmp_' + str(uuid.uuid4())[:8])
+
+    saved_urls = []
+    for f in files[:3]:  # máximo 3 fotos
+        if f and _allowed_file(f.filename):
+            ext = f.filename.rsplit('.', 1)[1].lower()
+            unique_name = f"{uuid.uuid4().hex}.{ext}"
+            folder = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                current_app.config['UPLOAD_FOLDER'],
+                'evidencias',
+                str(lavado_id)
+            )
+            os.makedirs(folder, exist_ok=True)
+            filepath = os.path.join(folder, unique_name)
+            f.save(filepath)
+            saved_urls.append(f"/uploads/evidencias/{lavado_id}/{unique_name}")
+
+    return jsonify({'fotos': saved_urls})
+
 
 @api_lavados_bp.route('/api/lavado/add_manual', methods=['POST'])
 @login_required
 def add_lavado_manual():
-    data         = request.json or {}
+    # Soporta tanto JSON como multipart/form-data (para fotos)
+    if request.content_type and 'multipart' in request.content_type:
+        data = request.form
+        fotos_raw = data.get('fotos_json', '[]')
+        try:
+            fotos = json.loads(fotos_raw)
+        except Exception:
+            fotos = []
+        checklist_raw = data.get('checklist_json', '{}')
+        try:
+            checklist = json.loads(checklist_raw)
+        except Exception:
+            checklist = {}
+        # Si vienen archivos directamente en este request
+        if 'fotos' in request.files:
+            files = request.files.getlist('fotos')
+            # Se guardan en carpeta temporal; el ID real se asigna tras inserción
+            _fotos_files = files
+        else:
+            _fotos_files = []
+    else:
+        data = request.json or {}
+        fotos = data.get('fotos', [])
+        checklist = data.get('checklist', {})
+        _fotos_files = []
+
     placa        = data.get('placa')
     fecha        = data.get('fecha')
     hora_llegada = data.get('hora_llegada', '')
@@ -27,7 +91,7 @@ def add_lavado_manual():
     tipo_lavado  = data.get('tipo_lavado', 'General')
     municipio    = data.get('municipio', '')
 
-    lavadores = data.get('lavadores', [])
+    lavadores = data.getlist('lavadores') if hasattr(data, 'getlist') else data.get('lavadores', [])
     if not lavadores:
         lavador_str = data.get('lavador', '')
         lavadores   = [lavador_str] if lavador_str else []
@@ -68,6 +132,7 @@ def add_lavado_manual():
 
     t_espera = _calc_diff(hora_llegada, hora_inicio)
     t_lavado = _calc_diff(hora_inicio, hora_fin)
+    origen   = (data.get('origen') or '').strip() or 'dashboard_manual'
 
     nuevo_lavado = {
         'placa':        placa,
@@ -81,7 +146,9 @@ def add_lavado_manual():
         'lavadores':    lavadores,
         'tipo_lavado':  tipo_lavado,
         'municipio':    municipio,
-        'origen':       'dashboard_manual',
+        'origen':       origen,
+        'fotos':        fotos,
+        'checklist':    checklist,
     }
     database.add_lavado(nuevo_lavado)
 
